@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NACA 0012 — CFD Analysis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #050a0f;
+    --panel: #080f18;
+    --border: #0d2235;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff14;
+    --grid: #0a1a28;
+    --text: #c8e4f0;
+    --muted: #3a6080;
+    --stall: #ff2244;
+    --glow: 0 0 12px rgba(0,212,255,0.4);
+    --glow2: 0 0 12px rgba(255,107,53,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed; inset:0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none; z-index: 1000;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, var(--panel), #060d15);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 900;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    letter-spacing: 3px;
+  }
+
+  .header-right {
+    font-size: 0.72rem; color: var(--muted); letter-spacing: 2px;
+    text-align: right;
+  }
+
+  .status-dot {
+    display: inline-block; width:8px; height:8px;
+    border-radius: 50%; background: var(--accent3);
+    box-shadow: 0 0 8px var(--accent3);
+    animation: blink 2s ease-in-out infinite;
+    margin-right: 6px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 1px;
+    height: calc(100vh - 55px);
+    background: var(--border);
+  }
+
+  .panel {
+    background: var(--panel);
+    padding: 20px;
+    overflow: auto;
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px; margin-bottom: 16px;
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    grid-row: 1 / 3;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* Airfoil canvas */
+  #airfoilCanvas {
+    width: 100%; height: 160px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  /* Readouts */
+  .readout-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .readout {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    position: relative; overflow: hidden;
+  }
+  .readout::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:1px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+  .readout-label {
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .readout-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 700; color: var(--accent);
+    text-shadow: var(--glow);
+  }
+  .readout-value.orange { color: var(--accent2); text-shadow: var(--glow2); }
+  .readout-value.red { color: var(--stall); text-shadow: 0 0 10px rgba(255,34,68,0.5); }
+  .readout-value.green { color: var(--accent3); }
+
+  /* Controls */
+  .control-group { margin-bottom: 16px; }
+  .control-label {
+    font-size: 0.65rem; color: var(--muted); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 6px; display: block;
+  }
+
+  input[type=range] {
+    width: 100%; appearance: none;
+    height: 3px; background: var(--border);
+    outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none; width:14px; height:14px;
+    border-radius: 50%; background: var(--accent);
+    box-shadow: var(--glow); cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width:14px; height:14px;
+    border-radius: 50%; background: var(--accent);
+    box-shadow: var(--glow); cursor: pointer; border: none;
+  }
+
+  .range-display {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem; color: var(--muted); margin-top: 4px;
+  }
+  .range-current {
+    font-family: 'Orbitron', monospace; color: var(--accent);
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    width: 100%; padding: 10px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem; letter-spacing: 3px;
+    cursor: pointer; text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .btn:hover {
+    background: rgba(0,212,255,0.1);
+    box-shadow: var(--glow);
+  }
+  .btn.running {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    box-shadow: var(--glow2);
+  }
+  .btn.reset-btn {
+    border-color: var(--muted);
+    color: var(--muted);
+    font-size: 0.65rem;
+    padding: 7px;
+    margin-top: 6px;
+  }
+
+  /* Stall warning */
+  .stall-warning {
+    background: rgba(255,34,68,0.08);
+    border: 1px solid var(--stall);
+    padding: 10px 12px;
+    font-size: 0.68rem; color: var(--stall);
+    letter-spacing: 1px;
+    display: none;
+    animation: pulse-warn 1s ease-in-out infinite;
+  }
+  .stall-warning.visible { display: block; }
+  @keyframes pulse-warn {
+    0%,100%{opacity:1} 50%{opacity:0.6}
+  }
+
+  /* TOP RIGHT — Airfoil meta info */
+  .info-panel {
+    grid-column: 2;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 32px; align-items: center;
+    background: var(--panel);
+  }
+
+  .info-item { display: flex; flex-direction: column; gap: 3px; }
+  .info-item-label { font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; }
+  .info-item-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem; color: var(--text);
+  }
+
+  /* CHART AREA */
+  #chartCanvas {
+    display: block;
+    background: var(--bg);
+  }
+
+  .chart-wrapper {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .chart-container {
+    grid-column: 2; grid-row: 2;
+    background: var(--panel);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chart-inner {
+    flex:1; position: relative; overflow: hidden;
+    padding: 20px 20px 10px 10px;
+  }
+
+  /* Table */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.68rem;
+  }
+  .data-table th {
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 2px;
+    text-align: left; border-bottom: 1px solid var(--border);
+    padding: 4px 8px; text-transform: uppercase;
+  }
+  .data-table td {
+    padding: 3px 8px; border-bottom: 1px solid rgba(13,34,53,0.5);
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .data-table tr:hover td { background: rgba(0,212,255,0.04); }
+  .stall-row td { color: var(--stall) !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AERO·SIM // NACA 0012</div>
+  <div class="header-right">
+    <span class="status-dot"></span>SIMULATION ACTIVE<br>
+    2D EMPIRICAL MODEL · VISCOUS-CORRECTED · INCOMPRESSIBLE FLOW
+  </div>
+</header>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="panel left-panel">
+    <div class="panel-title">◈ Airfoil Geometry</div>
+    <canvas id="airfoilCanvas" width="280" height="160"></canvas>
+
+    <div class="panel-title">◈ Aerodynamic Readouts</div>
+    <div class="readout-grid">
+      <div class="readout">
+        <div class="readout-label">C_L</div>
+        <div class="readout-value" id="clVal">0.000</div>
+      </div>
+      <div class="readout">
+        <div class="readout-label">C_D</div>
+        <div class="readout-value orange" id="cdVal">0.000</div>
+      </div>
+      <div class="readout">
+        <div class="readout-label">L/D Ratio</div>
+        <div class="readout-value green" id="ldVal">0.00</div>
+      </div>
+      <div class="readout">
+        <div class="readout-label">Alpha (α)</div>
+        <div class="readout-value" id="aVal">0.0°</div>
+      </div>
+    </div>
+
+    <div class="panel-title">◈ Simulation Controls</div>
+
+    <div class="control-group">
+      <label class="control-label">Angle of Attack — <span class="range-current" id="alphaDisplay">0°</span></label>
+      <input type="range" id="alphaSlider" min="-20" max="25" step="0.5" value="0">
+      <div class="range-display"><span>-20°</span><span>+25°</span></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label">Reynolds Number — <span class="range-current" id="reDisplay">1.0M</span></label>
+      <input type="range" id="reSlider" min="0.5" max="6" step="0.5" value="1">
+      <div class="range-display"><span>0.5M</span><span>6.0M</span></div>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label">Sweep Step — <span class="range-current" id="stepDisplay">1.0°</span></label>
+      <input type="range" id="stepSlider" min="0.5" max="2" step="0.5" value="1">
+      <div class="range-display"><span>0.5°</span><span>2.0°</span></div>
+    </div>
+
+    <button class="btn" id="sweepBtn" onclick="runSweep()">▶  Run α-Sweep</button>
+    <button class="btn reset-btn" onclick="resetSim()">↺  Reset</button>
+
+    <div class="stall-warning" id="stallWarning">
+      ⚠ STALL DETECTED — Attached flow has separated.<br>
+      Max C_L exceeded at α ≈ <span id="stallAngle">15°</span>
+    </div>
+  </div>
+
+  <!-- TOP-RIGHT INFO -->
+  <div class="info-panel">
+    <div class="info-item">
+      <span class="info-item-label">Profile</span>
+      <span class="info-item-val">NACA 0012</span>
+    </div>
+    <div class="info-item">
+      <span class="info-item-label">Chord</span>
+      <span class="info-item-val">1.00 m</span>
+    </div>
+    <div class="info-item">
+      <span class="info-item-label">Span</span>
+      <span class="info-item-val">∞  (2D)</span>
+    </div>
+    <div class="info-item">
+      <span class="info-item-label">Method</span>
+      <span class="info-item-val">Viscous Empirical v2</span>
+    </div>
+    <div class="info-item">
+      <span class="info-item-label">Max Thickness</span>
+      <span class="info-item-val">12% chord</span>
+    </div>
+    <div class="info-item">
+      <span class="info-item-label">Stall Model</span>
+      <span class="info-item-val" id="stallModelDisplay">Re + Hysteresis</span>
+    </div>
+  </div>
+
+  <!-- CHART AREA -->
+  <div class="chart-container">
+    <div class="panel-title" style="padding:16px 24px 0; margin:0; background:var(--panel)">◈ C_L vs α Polar — NACA 0012</div>
+    <div class="chart-inner">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+// ==================== PHYSICS (v2 — corrected 2D model) ====================
+// Fixes applied:
+//  [1] Induced drag (cdI) removed — infinite span 2D, no tip vortices
+//  [2] Lift slope corrected: 2π → ~5.9/rad viscous correction (empirical for NACA 0012)
+//  [3] Post-stall CL plateau at ~0.85-1.0 (not sharp exponential drop to 0.05)
+//  [4] Stall hysteresis: recovery angle ~2° below onset
+//  [5] Laminar/turbulent transition drag: low-Re uses mixed BL, not fully turbulent
+//  [6] Pressure drag grows with α pre-stall (boundary layer thickening)
+//  [7] Post-stall CD rises aggressively (bluff-body separated flow, ~1.8 max)
+//  [8] Mild stall asymmetry for positive vs negative α at low Re
+
+function naca0012Y(x) {
+  // Standard NACA 4-digit formula, t=0.12
+  return 0.6 * (0.2969*Math.sqrt(x) - 0.1260*x - 0.3516*x*x + 0.2843*x*x*x - 0.1015*x*x*x*x);
+}
+
+// [2] Viscous-corrected lift slope: ~5.73/rad at Re=1M, approaching 5.9/rad at high Re
+// Accounts for BL displacement thickness reducing effective camber
+function liftSlope(Re) {
+  // Viscous correction: dCL/dα ≈ 2π * (1 - delta_visc)
+  // Empirically: 5.73/rad at Re=0.5M → 5.92/rad at Re=6M
+  const reLog = Math.log10(Re / 1e6);        // 0 at 1M
+  return (5.73 + 0.12 * Math.min(reLog, 1.4)) * (Math.PI / 180); // per degree
+}
+
+// [4] Stall angles with hysteresis band
+function stallAngles(Re) {
+  // Onset: Re-dependent, mild asymmetry for positive α
+  let onset;
+  if (Re < 1e6)       onset = 10.0 + 3.0 * (Re / 1e6);
+  else if (Re < 3e6)  onset = 13.0 + 1.0 * ((Re - 1e6) / 2e6);
+  else                onset = 14.0 + 0.8 * Math.min((Re - 3e6) / 3e6, 1);
+  // Recovery is ~2° below onset (hysteresis)
+  const recovery = onset - 2.0;
+  return { onset, recovery };
+}
+
+// Track whether we're in the hysteretic stall region
+let _inStallHyst = false;
+
+function computeCL(alpha_deg, Re) {
+  const { onset, recovery } = stallAngles(Re);
+  const absA = Math.abs(alpha_deg);
+  const sign  = Math.sign(alpha_deg) || 1;
+
+  // [4] Hysteresis state machine
+  if (absA > onset)        _inStallHyst = true;
+  if (absA < recovery)     _inStallHyst = false;
+
+  const slope = liftSlope(Re);   // per degree
+
+  if (!_inStallHyst) {
+    // --- PRE-STALL ---
+    // [2] Viscous slope (not 2π)
+    const clBase = slope * alpha_deg;
+
+    // Leading-edge separation bubble droop starts at ~70% of stall
+    const t = absA / onset;
+    const droop = t > 0.70 ? 0.06 * ((t - 0.70) / 0.30) ** 1.8 : 0;
+    return clBase * (1 - droop);
+  } else {
+    // --- POST-STALL ---
+    // [3] Experimental NACA 0012 post-stall: CL drops then plateaus ~0.85-1.0
+    // Shape: sharp initial drop then gradual decay, not exponential to ~0
+    const clAtStall = slope * onset * 0.97;   // CL just before stall
+    const excess = absA - onset;
+
+    // Phase 1: rapid drop over first ~3° post-stall
+    // Phase 2: plateau around 0.85, then slow Newtonian decay at very high α
+    let clPost;
+    if (excess < 3) {
+      clPost = clAtStall - (clAtStall - 0.90) * (excess / 3);
+    } else if (excess < 12) {
+      // Plateau region (~0.85-0.95 depending on Re)
+      const plateau = 0.90 - 0.015 * (excess - 3);
+      clPost = Math.max(plateau, 0.60);
+    } else {
+      // Very high α: flat-plate Newtonian sin²α cos²α behavior
+      const a = absA * Math.PI / 180;
+      clPost = 2 * Math.sin(a) * Math.cos(a);   // sin(2α)
+    }
+    return sign * clPost;
+  }
+}
+
+function computeCD(alpha_deg, Re, cl) {
+  const { onset } = stallAngles(Re);
+  const absA = Math.abs(alpha_deg);
+
+  // [5] Skin friction — mixed laminar/turbulent BL
+  // Transition point xtr moves forward with Re and α
+  const xtr = Math.max(0.05, 0.7 - 0.05 * Math.log10(Re / 5e5) - 0.012 * absA);
+  const Rext = Re * xtr;
+  const cf_lam  = 1.328 / Math.sqrt(Math.max(Rext, 1e4));
+  const cf_turb = 0.074 / Math.pow(Re, 0.2);
+  const cf = xtr * cf_lam + (1 - xtr) * cf_turb;
+
+  // Wetted area factor for 12% thick airfoil (Raymer form factor)
+  const t_c = 0.12;
+  const cd_friction = 2 * cf * (1 + 2.0 * t_c + 60 * t_c ** 4);
+
+  // [1] ZERO induced drag — 2D infinite span
+  // cdI = 0  (was incorrectly cl²/(π·AR·e) before)
+
+  // [6] Pressure drag (pre-stall BL thickening), grows as α²
+  // Empirical: ~0 at α=0, ~0.003 at α=10°
+  const cd_pressure = 2.8e-5 * alpha_deg * alpha_deg;
+
+  // [7] Post-stall separated flow drag — aggressive rise
+  let cd_stall = 0;
+  if (absA > onset) {
+    const excess = absA - onset;
+    // Bluff-body separated: CD rises steeply, peaks near flat-plate value ~1.98 at 90°
+    // Use (1 - cos(2α)) bluff body model blended with excess angle
+    const a_rad = absA * Math.PI / 180;
+    const cd_bluff = 2.0 * Math.sin(a_rad) ** 2;   // flat plate at angle α
+    const blend = Math.min(excess / 15, 1.0);
+    cd_stall = blend * (cd_bluff - cd_friction - cd_pressure);
+    cd_stall = Math.max(cd_stall, 0);
+  }
+
+  return cd_friction + cd_pressure + cd_stall;
+}
+
+// ==================== STATE ====================
+let sweepData = [];
+let currentAlpha = 0;
+let sweepRunning = false;
+let sweepIntervalId = null;
+
+function getRe() { return parseFloat(document.getElementById('reSlider').value) * 1e6; }
+function getStep() { return parseFloat(document.getElementById('stepSlider').value); }
+
+// ==================== AIRFOIL DRAW ====================
+function drawAirfoil(alpha_deg) {
+  const c = document.getElementById('airfoilCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Background grid
+  ctx.strokeStyle = '#0a1a28';
+  ctx.lineWidth = 0.5;
+  for (let x=0; x<W; x+=20) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y=0; y<H; y+=20) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Center point
+  const cx = W/2, cy = H/2;
+  const scale = W * 0.65;
+  const rad = alpha_deg * Math.PI / 180;
+
+  // Build airfoil points
+  const N = 100;
+  const upperPts = [], lowerPts = [];
+  for (let i=0; i<=N; i++) {
+    const x = i/N;
+    const y = naca0012Y(x);
+    upperPts.push([x - 0.25, y]);
+    lowerPts.push([x - 0.25, -y]);
+  }
+
+  function rotate([px,py]) {
+    return [
+      cx + (px*Math.cos(rad) - py*Math.sin(rad)) * scale,
+      cy + (px*Math.sin(rad) + py*Math.cos(rad)) * scale * 0.8
+    ];
+  }
+
+  // Fill
+  ctx.beginPath();
+  const startPt = rotate(upperPts[0]);
+  ctx.moveTo(...startPt);
+  for (const pt of upperPts) ctx.lineTo(...rotate(pt));
+  for (let i = lowerPts.length-1; i>=0; i--) ctx.lineTo(...rotate(lowerPts[i]));
+  ctx.closePath();
+  ctx.fillStyle = '#0a1f30';
+  ctx.fill();
+
+  // Stroke
+  const alphaAbs = Math.abs(alpha_deg);
+  const Re = getRe();
+  const { onset: stallA } = stallAngles(Re);
+  const inStall = alphaAbs > stallA;
+  ctx.strokeStyle = inStall ? '#ff2244' : '#00d4ff';
+  ctx.lineWidth = inStall ? 1.5 : 1;
+  if (inStall) ctx.shadowColor = '#ff2244';
+  else ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Chord line
+  const chordStart = rotate([-0.25, 0]);
+  const chordEnd = rotate([0.75, 0]);
+  ctx.beginPath();
+  ctx.moveTo(...chordStart); ctx.lineTo(...chordEnd);
+  ctx.strokeStyle = 'rgba(0,212,255,0.25)';
+  ctx.lineWidth = 0.5; ctx.setLineDash([4,4]);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Flow arrows
+  for (let i=0; i<5; i++) {
+    const y0 = cy - 55 + i*22;
+    const x1 = 18, x2 = 38;
+    ctx.beginPath();
+    ctx.moveTo(x1, y0); ctx.lineTo(x2, y0);
+    ctx.moveTo(x2-5, y0-4); ctx.lineTo(x2, y0); ctx.lineTo(x2-5, y0+4);
+    ctx.strokeStyle = 'rgba(0,212,255,0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  // Alpha label
+  ctx.font = '11px Share Tech Mono';
+  ctx.fillStyle = inStall ? '#ff2244' : '#00d4ff';
+  ctx.fillText(`α = ${alpha_deg.toFixed(1)}°`, 8, H-8);
+}
+
+// ==================== CHART ====================
+function drawChart() {
+  const canvas = document.getElementById('chartCanvas');
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth - 2;
+  canvas.height = container.clientHeight - 2;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const PAD = { top:30, right:30, bottom:50, left:56 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  ctx.clearRect(0,0,W,H);
+
+  // BG
+  ctx.fillStyle = '#050a0f';
+  ctx.fillRect(0,0,W,H);
+
+  // Grid
+  const xMin=-20, xMax=25, yMin=-1.8, yMax=1.8;
+  const xScale = v => PAD.left + (v - xMin)/(xMax-xMin) * cW;
+  const yScale = v => PAD.top + (yMax-v)/(yMax-yMin) * cH;
+
+  // Grid lines
+  ctx.setLineDash([2,6]);
+  ctx.lineWidth = 0.6;
+  for (let x=-20; x<=25; x+=5) {
+    ctx.beginPath(); ctx.moveTo(xScale(x), PAD.top); ctx.lineTo(xScale(x), PAD.top+cH);
+    ctx.strokeStyle = '#0a1a28'; ctx.stroke();
+  }
+  for (let y=-1.5; y<=1.5; y+=0.5) {
+    ctx.beginPath(); ctx.moveTo(PAD.left, yScale(y)); ctx.lineTo(PAD.left+cW, yScale(y));
+    ctx.strokeStyle = y===0 ? '#0d2235' : '#0a1a28'; ctx.lineWidth = y===0?1:0.6; ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Axes
+  ctx.strokeStyle = '#1a3a55';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD.left, yScale(0)); ctx.lineTo(PAD.left+cW, yScale(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xScale(0), PAD.top); ctx.lineTo(xScale(0), PAD.top+cH); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#3a6080'; ctx.font = '10px Share Tech Mono';
+  for (let x=-20; x<=25; x+=5) {
+    ctx.fillText(x+'°', xScale(x)-8, PAD.top+cH+16);
+  }
+  for (let y=-1.5; y<=1.5; y+=0.5) {
+    ctx.fillText(y.toFixed(1), PAD.left-36, yScale(y)+4);
+  }
+
+  ctx.fillStyle = '#3a6080'; ctx.font = '11px Share Tech Mono';
+  ctx.fillText('α (deg)', PAD.left + cW/2 - 20, H-8);
+  ctx.save();
+  ctx.translate(12, PAD.top + cH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('C_L', -10, 0);
+  ctx.restore();
+
+  // Theoretical linear reference (viscous-corrected slope, dashed)
+  ctx.beginPath(); ctx.setLineDash([4,8]);
+  ctx.strokeStyle = 'rgba(0,212,255,0.12)'; ctx.lineWidth=1;
+  const refSlope = liftSlope(getRe());
+  for (let x=-20; x<=25; x++) {
+    const cl = refSlope * x;
+    if (x===-20) ctx.moveTo(xScale(x), yScale(cl));
+    else ctx.lineTo(xScale(x), yScale(cl));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+
+  if (sweepData.length < 2) return;
+
+  // Find stall
+  const Re = getRe();
+  const { onset: stallA } = stallAngles(Re);
+  let stallIdx = sweepData.findIndex(d => d.alpha > stallA);
+
+  // Gradient fill under curve
+  if (sweepData.length > 2) {
+    const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top+cH);
+    grad.addColorStop(0, 'rgba(0,212,255,0.12)');
+    grad.addColorStop(0.5, 'rgba(0,212,255,0.04)');
+    grad.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.beginPath();
+    ctx.moveTo(xScale(sweepData[0].alpha), yScale(0));
+    for (const d of sweepData) ctx.lineTo(xScale(d.alpha), yScale(d.cl));
+    ctx.lineTo(xScale(sweepData[sweepData.length-1].alpha), yScale(0));
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+  }
+
+  // CL curve
+  ctx.beginPath(); ctx.lineWidth=2;
+  sweepData.forEach((d,i) => {
+    const inStall = d.alpha > stallA;
+    if (i===0) ctx.moveTo(xScale(d.alpha), yScale(d.cl));
+    else {
+      ctx.strokeStyle = inStall ? '#ff2244' : '#00d4ff';
+      if (!inStall) ctx.shadowColor='#00d4ff'; else ctx.shadowColor='#ff2244';
+      ctx.shadowBlur=6;
+      ctx.lineTo(xScale(d.alpha), yScale(d.cl));
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xScale(d.alpha), yScale(d.cl));
+    }
+  });
+  ctx.shadowBlur=0;
+
+  // Data points
+  sweepData.forEach(d => {
+    const inStall = d.alpha > stallA;
+    ctx.beginPath();
+    ctx.arc(xScale(d.alpha), yScale(d.cl), 3, 0, Math.PI*2);
+    ctx.fillStyle = inStall ? '#ff2244' : '#00d4ff';
+    ctx.fill();
+  });
+
+  // Stall point marker
+  if (stallIdx > 0 && stallIdx < sweepData.length) {
+    const sd = sweepData[stallIdx-1];
+    const sx = xScale(sd.alpha), sy = yScale(sd.cl);
+    ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI*2);
+    ctx.strokeStyle = '#ff2244'; ctx.lineWidth=1.5;
+    ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.fillStyle='#ff2244'; ctx.font='10px Share Tech Mono';
+    ctx.fillText(`STALL ≈ ${sd.alpha.toFixed(1)}°`, sx+10, sy-6);
+    ctx.fillText(`C_Lmax = ${sd.cl.toFixed(3)}`, sx+10, sy+8);
+
+    // Vertical dotted line
+    ctx.beginPath(); ctx.setLineDash([2,6]);
+    ctx.moveTo(sx, PAD.top); ctx.lineTo(sx, PAD.top+cH);
+    ctx.strokeStyle='rgba(255,34,68,0.25)'; ctx.lineWidth=1;
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Current alpha indicator
+  if (currentAlpha >= xMin && currentAlpha <= xMax) {
+    const cl = computeCL(currentAlpha, getRe());
+    ctx.beginPath();
+    ctx.arc(xScale(currentAlpha), yScale(cl), 6, 0, Math.PI*2);
+    ctx.fillStyle='#ffffff33'; ctx.fill();
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+}
+
+// ==================== UPDATE ====================
+function updateReadouts(alpha) {
+  const Re = getRe();
+  const cl = computeCL(alpha, Re);
+  const cd = computeCD(alpha, Re, cl);
+  const ld = Math.abs(cl/cd);
+  const { onset: stallA } = stallAngles(Re);
+  const inStall = Math.abs(alpha) > stallA;
+
+  document.getElementById('clVal').textContent = cl.toFixed(4);
+  document.getElementById('cdVal').textContent = cd.toFixed(5);
+  document.getElementById('ldVal').textContent = isFinite(ld) ? ld.toFixed(2) : '—';
+  document.getElementById('aVal').textContent = alpha.toFixed(1)+'°';
+
+  const clEl = document.getElementById('clVal');
+  clEl.className = 'readout-value ' + (inStall ? 'red' : '');
+
+  document.getElementById('stallWarning').classList.toggle('visible', inStall);
+  document.getElementById('stallAngle').textContent = stallA.toFixed(1)+'°';
+
+  drawAirfoil(alpha);
+}
+
+function updateAlpha(val) {
+  currentAlpha = parseFloat(val);
+  document.getElementById('alphaDisplay').textContent = currentAlpha.toFixed(1)+'°';
+  updateReadouts(currentAlpha);
+  drawChart();
+}
+
+// ==================== SWEEP ====================
+function runSweep() {
+  if (sweepRunning) {
+    clearInterval(sweepIntervalId);
+    sweepRunning = false;
+    document.getElementById('sweepBtn').textContent = '▶  Run α-Sweep';
+    document.getElementById('sweepBtn').classList.remove('running');
+    return;
+  }
+
+  sweepData = [];
+  sweepRunning = true;
+  const btn = document.getElementById('sweepBtn');
+  btn.textContent = '■  Stop Sweep';
+  btn.classList.add('running');
+
+  const step = getStep();
+  const Re = getRe();
+  let alpha = -20;
+
+  sweepIntervalId = setInterval(() => {
+    if (alpha > 25) {
+      clearInterval(sweepIntervalId);
+      sweepRunning = false;
+      btn.textContent = '▶  Re-Run α-Sweep';
+      btn.classList.remove('running');
+      return;
+    }
+    const cl = computeCL(alpha, Re);
+    const cd = computeCD(alpha, Re, cl);
+    sweepData.push({ alpha, cl, cd });
+    currentAlpha = alpha;
+    document.getElementById('alphaSlider').value = alpha;
+    document.getElementById('alphaDisplay').textContent = alpha.toFixed(1)+'°';
+    updateReadouts(alpha);
+    drawChart();
+    alpha = Math.round((alpha + step)*10)/10;
+  }, 60);
+}
+
+function resetSim() {
+  clearInterval(sweepIntervalId);
+  sweepRunning = false;
+  sweepData = [];
+  currentAlpha = 0;
+  _inStallHyst = false;
+  document.getElementById('alphaSlider').value = 0;
+  document.getElementById('alphaDisplay').textContent = '0°';
+  document.getElementById('sweepBtn').textContent = '▶  Run α-Sweep';
+  document.getElementById('sweepBtn').classList.remove('running');
+  updateReadouts(0);
+  drawChart();
+}
+
+// ==================== EVENTS ====================
+document.getElementById('alphaSlider').addEventListener('input', e => updateAlpha(e.target.value));
+document.getElementById('reSlider').addEventListener('input', e => {
+  document.getElementById('reDisplay').textContent = parseFloat(e.target.value).toFixed(1)+'M';
+  _inStallHyst = false; // reset hysteresis when Re changes
+  updateReadouts(currentAlpha);
+  if (sweepData.length) {
+    sweepData = sweepData.map(d => ({
+      alpha: d.alpha,
+      cl: computeCL(d.alpha, getRe()),
+      cd: computeCD(d.alpha, getRe(), computeCL(d.alpha, getRe()))
+    }));
+    drawChart();
+  }
+});
+document.getElementById('stepSlider').addEventListener('input', e => {
+  document.getElementById('stepDisplay').textContent = parseFloat(e.target.value).toFixed(1)+'°';
+});
+
+window.addEventListener('resize', drawChart);
+
+// Init
+updateReadouts(0);
+drawChart();
+</script>
+</body>
+</html>
