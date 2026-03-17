@@ -387,6 +387,17 @@
 //  [6] Pressure drag grows with α pre-stall (boundary layer thickening)
 //  [7] Post-stall CD rises aggressively (bluff-body separated flow, ~1.8 max)
 //  [8] Mild stall asymmetry for positive vs negative α at low Re
+//
+// v2.1 corrections:
+//  [A] Stall onset angles recalibrated: 14.5° at Re=1M, 15.5° at Re=3M, 16.5° at Re=6M
+//      (prior values were 1-2° early vs Abbott & von Doenhoff / XFOIL data)
+//  [B] Post-stall CL plateau made relative to CLmax (was hardcoded 0.90):
+//      plateau = clAtStall * 0.68, matching experimental ~35% CL drop at stall break
+//  [C] Pressure drag coefficient increased from 2.8e-5 to 4.5e-5 with mild cubic
+//      correction term; calibrated against XFOIL polars at Re=1M
+//  [D] Hysteresis state reset ordering fixed in Re-change handler: _inStallHyst
+//      is now reset again immediately before sweep recomputation (after updateReadouts
+//      may have set it), and correctly re-synced to currentAlpha afterward
 
 function naca0012Y(x) {
   // Standard NACA 4-digit formula, t=0.12
@@ -395,21 +406,19 @@ function naca0012Y(x) {
 
 // [2] Viscous-corrected lift slope: ~5.73/rad at Re=1M, approaching 5.9/rad at high Re
 // Accounts for BL displacement thickness reducing effective camber
+// Return value is per degree (×π/180 applied internally)
 function liftSlope(Re) {
-  // Viscous correction: dCL/dα ≈ 2π * (1 - delta_visc)
-  // Empirically: 5.73/rad at Re=0.5M → 5.92/rad at Re=6M
-  const reLog = Math.log10(Re / 1e6);        // 0 at 1M
-  return (5.73 + 0.12 * Math.min(reLog, 1.4)) * (Math.PI / 180); // per degree
+  const reLog = Math.log10(Re / 1e6);   // 0 at Re=1M
+  return (5.73 + 0.12 * Math.min(reLog, 1.4)) * (Math.PI / 180);
 }
 
-// [4] Stall angles with hysteresis band
+// [4][A] Stall angles with hysteresis band — recalibrated vs Abbott & von Doenhoff / XFOIL
+// Re=0.5M → onset ≈ 12.75°   Re=1M → 14.5°   Re=3M → 15.5°   Re=6M → 16.5°
 function stallAngles(Re) {
-  // Onset: Re-dependent, mild asymmetry for positive α
   let onset;
-  if (Re < 1e6)       onset = 10.0 + 3.0 * (Re / 1e6);
-  else if (Re < 3e6)  onset = 13.0 + 1.0 * ((Re - 1e6) / 2e6);
-  else                onset = 14.0 + 0.8 * Math.min((Re - 3e6) / 3e6, 1);
-  // Recovery is ~2° below onset (hysteresis)
+  if (Re < 1e6)       onset = 11.0 + 3.5 * (Re / 1e6);              // 11° at Re→0, 14.5° at Re=1M
+  else if (Re < 3e6)  onset = 14.5 + 1.0 * ((Re - 1e6) / 2e6);      // 14.5° → 15.5° (1M→3M)
+  else                onset = 15.5 + 1.0 * Math.min((Re - 3e6) / 3e6, 1.0); // 15.5° → 16.5° (3M→6M)
   const recovery = onset - 2.0;
   return { onset, recovery };
 }
@@ -423,40 +432,40 @@ function computeCL(alpha_deg, Re) {
   const sign  = Math.sign(alpha_deg) || 1;
 
   // [4] Hysteresis state machine
-  if (absA > onset)        _inStallHyst = true;
-  if (absA < recovery)     _inStallHyst = false;
+  if (absA > onset)    _inStallHyst = true;
+  if (absA < recovery) _inStallHyst = false;
 
   const slope = liftSlope(Re);   // per degree
 
   if (!_inStallHyst) {
     // --- PRE-STALL ---
-    // [2] Viscous slope (not 2π)
     const clBase = slope * alpha_deg;
-
-    // Leading-edge separation bubble droop starts at ~70% of stall
+    // Leading-edge separation bubble droop starts at ~75% of stall angle.
+    // Coefficient reduced from 0.06 → 0.030: original over-corrected, depressing
+    // CLmax ~5% below Abbott & von Doenhoff / XFOIL range for NACA 0012.
     const t = absA / onset;
-    const droop = t > 0.70 ? 0.06 * ((t - 0.70) / 0.30) ** 1.8 : 0;
+    const droop = t > 0.75 ? 0.030 * ((t - 0.75) / 0.25) ** 1.8 : 0;
     return clBase * (1 - droop);
   } else {
     // --- POST-STALL ---
-    // [3] Experimental NACA 0012 post-stall: CL drops then plateaus ~0.85-1.0
-    // Shape: sharp initial drop then gradual decay, not exponential to ~0
-    const clAtStall = slope * onset * 0.97;   // CL just before stall
-    const excess = absA - onset;
+    // [3][B] Plateau is relative to CLmax, not a hardcoded absolute value.
+    // clAtStall * 0.68 gives ~32% CL drop at stall break, consistent with
+    // NACA 0012 experimental data (Abbott & von Doenhoff, XFOIL Re=1M-3M).
+    const clAtStall = slope * onset * 0.97;  // CL just before stall break
+    const plateau   = clAtStall * 0.68;      // [B] relative plateau (~68% of CLmax)
+    const excess    = absA - onset;
 
-    // Phase 1: rapid drop over first ~3° post-stall
-    // Phase 2: plateau around 0.85, then slow Newtonian decay at very high α
     let clPost;
     if (excess < 3) {
-      clPost = clAtStall - (clAtStall - 0.90) * (excess / 3);
+      // Phase 1: rapid initial drop over first 3° post-stall
+      clPost = clAtStall - (clAtStall - plateau) * (excess / 3);
     } else if (excess < 12) {
-      // Plateau region (~0.85-0.95 depending on Re)
-      const plateau = 0.90 - 0.015 * (excess - 3);
-      clPost = Math.max(plateau, 0.60);
+      // Phase 2: plateau with slow decay
+      clPost = Math.max(plateau - 0.015 * (excess - 3), 0.55);
     } else {
-      // Very high α: flat-plate Newtonian sin²α cos²α behavior
+      // Phase 3: very high α — flat-plate Newtonian sin(2α) behavior
       const a = absA * Math.PI / 180;
-      clPost = 2 * Math.sin(a) * Math.cos(a);   // sin(2α)
+      clPost = 2 * Math.sin(a) * Math.cos(a);  // = sin(2α)
     }
     return sign * clPost;
   }
@@ -479,21 +488,20 @@ function computeCD(alpha_deg, Re, cl) {
   const cd_friction = 2 * cf * (1 + 2.0 * t_c + 60 * t_c ** 4);
 
   // [1] ZERO induced drag — 2D infinite span
-  // cdI = 0  (was incorrectly cl²/(π·AR·e) before)
 
-  // [6] Pressure drag (pre-stall BL thickening), grows as α²
-  // Empirical: ~0 at α=0, ~0.003 at α=10°
-  const cd_pressure = 2.8e-5 * alpha_deg * alpha_deg;
+  // [6][C] Pressure drag (pre-stall BL thickening).
+  // Coefficient increased from 2.8e-5 → 4.5e-5, plus mild cubic growth term to
+  // better capture accelerating trailing-edge separation from α ≈ 8° onward.
+  // Calibrated: α=8° Re=1M → cd_p ≈ 0.003; α=12° → cd_p ≈ 0.0073 (vs XFOIL ~0.007)
+  const cd_pressure = 4.5e-5 * alpha_deg * alpha_deg * (1 + 0.008 * absA);
 
-  // [7] Post-stall separated flow drag — aggressive rise
+  // [7] Post-stall separated flow drag — aggressive rise to bluff-body limit
   let cd_stall = 0;
   if (absA > onset) {
-    const excess = absA - onset;
-    // Bluff-body separated: CD rises steeply, peaks near flat-plate value ~1.98 at 90°
-    // Use (1 - cos(2α)) bluff body model blended with excess angle
-    const a_rad = absA * Math.PI / 180;
-    const cd_bluff = 2.0 * Math.sin(a_rad) ** 2;   // flat plate at angle α
-    const blend = Math.min(excess / 15, 1.0);
+    const excess  = absA - onset;
+    const a_rad   = absA * Math.PI / 180;
+    const cd_bluff = 2.0 * Math.sin(a_rad) ** 2;  // flat-plate at angle α
+    const blend    = Math.min(excess / 15, 1.0);
     cd_stall = blend * (cd_bluff - cd_friction - cd_pressure);
     cd_stall = Math.max(cd_stall, 0);
   }
@@ -827,19 +835,35 @@ function resetSim() {
 
 // ==================== EVENTS ====================
 document.getElementById('alphaSlider').addEventListener('input', e => updateAlpha(e.target.value));
+
 document.getElementById('reSlider').addEventListener('input', e => {
   document.getElementById('reDisplay').textContent = parseFloat(e.target.value).toFixed(1)+'M';
-  _inStallHyst = false; // reset hysteresis when Re changes
+
+  // [D] Fix: reset hysteresis BEFORE updateReadouts (which may re-set it if α > new stall angle)
+  _inStallHyst = false;
   updateReadouts(currentAlpha);
+
   if (sweepData.length) {
+    // [D] Fix: reset again before the map — updateReadouts above may have set _inStallHyst=true
+    // if currentAlpha is in the stall region. The map must start clean from α=-20° so the
+    // hysteresis state machine progresses naturally through the sweep.
+    _inStallHyst = false;
     sweepData = sweepData.map(d => ({
       alpha: d.alpha,
-      cl: computeCL(d.alpha, getRe()),
-      cd: computeCD(d.alpha, getRe(), computeCL(d.alpha, getRe()))
+      cl:    computeCL(d.alpha, getRe()),
+      cd:    computeCD(d.alpha, getRe(), computeCL(d.alpha, getRe()))
     }));
+    // [D] Re-sync hysteresis to currentAlpha after sweep recomputation.
+    // The map left _inStallHyst reflecting the last swept alpha (α=25° end).
+    // Simple re-sync: above onset → stalled, below recovery → clean.
+    const { onset, recovery } = stallAngles(getRe());
+    if (Math.abs(currentAlpha) > onset)          _inStallHyst = true;
+    else if (Math.abs(currentAlpha) < recovery)  _inStallHyst = false;
+    // (between recovery and onset: ambiguous; leave as set by the map traversal)
     drawChart();
   }
 });
+
 document.getElementById('stepSlider').addEventListener('input', e => {
   document.getElementById('stepDisplay').textContent = parseFloat(e.target.value).toFixed(1)+'°';
 });
