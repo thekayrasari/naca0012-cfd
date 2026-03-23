@@ -1,6 +1,6 @@
-# NACA 0012 — Interactive CFD Analysis
+# NACA 0012 — Interactive Aerodynamic Analysis
 
-A browser-based, interactive 2D aerodynamic simulation of the **NACA 0012 symmetric airfoil**. Built as a single-file HTML application, it uses a viscous-corrected empirical model to compute lift and drag characteristics in real time — no backend, no dependencies, no build step.
+A browser-based, interactive 2D aerodynamic simulation of the **NACA 0012 symmetric airfoil**. Implemented as a single self-contained `index.html` file — no backend, no dependencies, no build step.
 
 **Live demo:** [thekayrasari.github.io/naca0012-cfd](https://thekayrasari.github.io/naca0012-cfd/)
 
@@ -18,30 +18,26 @@ This tool simulates incompressible, viscous 2D flow over the NACA 0012 airfoil a
 | Chord | 1.00 m |
 | Span | ∞ (2D assumption) |
 | Flow regime | Incompressible |
-| Method | Viscous Empirical v2 |
+| Method | Viscous empirical, calibrated to wind tunnel data |
 | Stall model | Reynolds-dependent with hysteresis |
 
-The solver uses a viscous-corrected empirical approach calibrated to published NACA 0012 wind tunnel data. It accounts for Reynolds number effects on stall onset and incorporates hysteresis behavior around the stall angle. It does **not** use a panel method or finite-volume solver — it is a fast analytical approximation suitable for educational use.
+The solver uses a viscous-corrected empirical approach calibrated to published NACA 0012 wind tunnel data. It accounts for Reynolds number effects on stall onset and incorporates hysteresis behavior around the stall angle. It is **not** a panel method or finite-volume solver — it is a fast analytical approximation suitable for educational use.
 
 ---
 
-## Features
+## Project Structure
 
-- **Real-time aerodynamic readouts** — C\_L, C\_D, and L/D ratio update instantly as parameters change
-- **Angle of Attack sweep** — automated α-sweep from −20° to +25° with configurable step size
-- **Reynolds number control** — adjustable from 0.5M to 6.0M
-- **Stall detection** — alerts when flow separation is predicted (typically α ≈ 15° for Re ~ 1M)
-- **C\_L vs α polar plot** — full polars generated from sweep results
-- **Airfoil geometry display** — rendered cross-section of the NACA 0012 profile
-- **No installation required** — entirely self-contained in a single `index.html` file
+```
+naca0012-cfd/
+├── index.html      # Complete simulation — all logic, UI, and rendering
+└── LICENSE
+```
 
 ---
 
 ## Usage
 
 ### Running Locally
-
-Clone the repository and open the file directly in any modern browser:
 
 ```bash
 git clone https://github.com/thekayrasari/naca0012-cfd.git
@@ -50,7 +46,7 @@ open index.html   # macOS
 # or just double-click index.html on Windows/Linux
 ```
 
-No web server, build tools, or internet connection required.
+No Node.js, no `npm install`, no web server required. Works fully offline.
 
 ### Controls
 
@@ -66,21 +62,13 @@ No web server, build tools, or internet connection required.
 
 ## Output Parameters
 
-- **C\_L** — Lift coefficient
-- **C\_D** — Drag coefficient
-- **L/D** — Lift-to-drag ratio (aerodynamic efficiency)
-- **Alpha (α)** — Current angle of attack in degrees
-- **Stall warning** — Triggered when attached flow separation is detected
-
----
-
-## Repository Structure
-
-```
-naca0012-cfd/
-├── index.html      # Complete simulation — all logic, UI, and rendering
-└── LICENSE         # MIT License
-```
+| Output | Description |
+|---|---|
+| C_L | Lift coefficient |
+| C_D | Drag coefficient |
+| L/D | Lift-to-drag ratio (aerodynamic efficiency) |
+| α | Current angle of attack in degrees |
+| Stall warning | Triggered when flow separation is predicted |
 
 ---
 
@@ -88,7 +76,7 @@ naca0012-cfd/
 
 - 2D analysis only — no 3D wing or finite-span effects
 - Incompressible flow — not valid above approximately Mach 0.3
-- Empirical model — results are approximate; not a substitute for panel method (e.g. XFOIL) or CFD (e.g. OpenFOAM) analysis
+- Empirical model — results are approximate; not a substitute for a panel method (e.g. XFOIL) or RANS solver (e.g. OpenFOAM)
 - No boundary layer transition control
 - Subsonic regime only
 
@@ -98,4 +86,4 @@ For higher-fidelity results, consider [XFOIL](https://web.mit.edu/drela/Public/w
 
 ## License
 
-MIT License — see [LICENSE](./LICENSE) for details.
+MIT — see [LICENSE](./LICENSE) for details.
