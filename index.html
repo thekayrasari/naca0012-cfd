@@ -1,998 +1,1945 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NACA 0012</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0c0e14;
-    --panel:   #111420;
-    --panel2:  #161926;
-    --border:  #1f2535;
-    --border2: #2a3045;
-    --text:    #c8cedf;
-    --muted:   #5a6278;
-    --muted2:  #3e4760;
-    --accent:  #6b9bd2;
-    --gold:    #c4a35a;
-    --stall:   #b84040;
-    --stall2:  #d45858;
-    --ok:      #4a9e72;
-    --serif:   'Spectral', Georgia, serif;
-    --sans:    'Source Sans 3', system-ui, sans-serif;
-    --mono:    'JetBrains Mono', 'Courier New', monospace;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroDyn 2D: NACA 0012 Interactive CFD Wind Tunnel</title>
+  
+  <!-- Typography and Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+  <style>
+    /* ============================================================
+       DESIGN TOKENS — Extracted from source site
+       ============================================================ */
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-    font-size: 13px;
-    line-height: 1.5;
-  }
+    /* -----------------------------------------------------------
+       BRAND COLORS
+       ----------------------------------------------------------- */
+    :root {
+      --color-primary:          #536b78;
+      --color-primary-fg:       #cee5f2;
+      --color-ring:             #536b78;
 
-  /* ── HEADER ─────────────────────────────────── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 28px;
-    height: 54px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-  }
+      /* Component-level color aliases */
+      --accent:                 #2F3037;
+      --accent-hover:           #40414a;
+      --accent-contrast:        #ffffff;
+      --border-color:           #536b78;
+      --alpha-overlay:          rgba(83, 107, 120, 0.05);
+    }
 
-  .header-left {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
+    /* -----------------------------------------------------------
+       TYPOGRAPHY — Font stacks
+       ----------------------------------------------------------- */
+    :root {
+      --font-sans:  Inter, "GeistSans", sans-serif;
+      --font-mono:  "Roboto Mono", Menlo, Monaco, monospace;
+    }
 
-  .logo {
-    font-family: var(--serif);
-    font-size: 1.05rem;
-    font-weight: 500;
-    color: var(--text);
-    letter-spacing: 0.02em;
-  }
+    /* -----------------------------------------------------------
+       TYPOGRAPHY — Heading (h1 style)
+       ----------------------------------------------------------- */
+    :root {
+      --heading-font-family:    var(--font-sans);
+      --heading-font-size:      160px;
+      --heading-font-weight:    900;
+      --heading-line-height:    130px;
+      --heading-letter-spacing: -6px;
+      --heading-color:          rgb(83, 107, 120);   /* = #536b78 */
+      --heading-text-transform: uppercase;
+      --heading-margin-bottom:  32px;
+    }
 
-  .logo em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 300;
-  }
+    /* -----------------------------------------------------------
+       TYPOGRAPHY — Body
+       ----------------------------------------------------------- */
+    :root {
+      --body-font-family:       var(--font-sans);
+      --body-font-size:         16px;
+      --body-font-weight:       400;
+      --body-line-height:       24px;
+      --body-letter-spacing:    normal;
+      --body-color:             #111827; /* near-black */
+      --body-text-transform:    none;
+    }
 
-  .sim-note {
-    margin-top: 3px;
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+    /* -----------------------------------------------------------
+       COMPONENTS — Button
+       ----------------------------------------------------------- */
+    :root {
+      --btn-font-family:        var(--font-sans);
+      --btn-font-size:          13px;
+      --btn-font-weight:        700;
+      --btn-line-height:        20px;
+      --btn-letter-spacing:     0.5px;
+      --btn-text-transform:     uppercase;
 
+      --btn-color:              rgb(83, 107, 120);   /* = #536b78 */
+      --btn-bg:                 #ffffff;             /* white */
+      --btn-border:             2px solid rgb(83, 107, 120);
+      --btn-border-radius:      0px;
+      --btn-padding:            8px 14px;
+      --btn-transition:         0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-  /* ── LAYOUT ──────────────────────────────────── */
-  main {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 0;
-    height: calc(100vh - 54px);
-    background: var(--border);
-  }
+    /* -----------------------------------------------------------
+       COMPONENTS — Card/Container
+       ----------------------------------------------------------- */
+    :root {
+      --card-bg:                rgb(255, 255, 255);
+      --card-border:            2px solid rgb(83, 107, 120);
+      --card-border-radius:     0px;
+      --card-padding:           24px;
+      --card-box-shadow:        0 4px 12px rgba(0, 0, 0, 0.05);
+      --card-transition:        0.2s ease-out;
+    }
 
-  .panel {
-    background: var(--panel);
-    padding: 20px 18px;
-    overflow: auto;
-  }
+    /* -----------------------------------------------------------
+       COMPONENTS — Badge/Label
+       ----------------------------------------------------------- */
+    :root {
+      --badge-font-family:      var(--font-sans);
+      --badge-font-size:        11px;
+      --badge-font-weight:      700;
+      --badge-line-height:      16px;
+      --badge-letter-spacing:   0.75px;
+      --badge-text-transform:   uppercase;
+      
+      --badge-color:            rgb(255, 255, 255);
+      --badge-bg:               rgb(83, 107, 120);
+      --badge-padding:          6px 12px;
+      --badge-border-radius:    0px;
+    }
 
-  .section-title {
-    font-family: var(--sans);
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 7px;
-    margin-bottom: 14px;
-    margin-top: 20px;
-  }
+    /* -----------------------------------------------------------
+       COMPONENTS — Banner/Alert
+       ----------------------------------------------------------- */
+    :root {
+      --banner-bg:              rgb(255, 255, 255);
+      --banner-border-left:     4px solid rgb(83, 107, 120);
+      --banner-padding:         16px 24px;
+      --banner-margin-top:      24px;
+      --banner-margin-bottom:   24px;
+      --banner-border-radius:   0px;
+    }
 
-  .section-title:first-child { margin-top: 0; }
+    /* -----------------------------------------------------------
+       LAYOUT — Spacing Scale
+       ----------------------------------------------------------- */
+    :root {
+      --spacing-xs:    4px;
+      --spacing-sm:    8px;
+      --spacing-md:    16px;
+      --spacing-lg:    24px;
+      --spacing-xl:    32px;
+      --spacing-2xl:   48px;
+      --spacing-3xl:   64px;
+    }
 
-  /* ── LEFT PANEL ──────────────────────────────── */
-  .left-panel {
-    grid-row: 1 / 3;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+    /* -----------------------------------------------------------
+       SHIMMER ANIMATION (hover effect)
+       ----------------------------------------------------------- */
+    :root {
+      --shimmer-hover-transform:       skew(-45deg) translateX(600%);
+      --shimmer-hover-after-transform: skewX(45deg) translateX(-150%);
+    }
 
-  /* Airfoil canvas */
-  #airfoilCanvas {
-    width: 100%;
-    height: 150px;
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--bg);
-  }
+    /* -----------------------------------------------------------
+       SEMANTIC SHORTCUTS
+       ----------------------------------------------------------- */
+    :root {
+      --surface-bg:     #ffffff;
+      --text-default:   #111827;
+      --text-brand:     #536b78;
+      --radius:         0px;            /* sharp corners everywhere */
+    }
 
-  /* ── READOUTS ────────────────────────────────── */
-  .readout-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
+    /* ============================================================
+       BASE STYLES
+       ============================================================ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  .readout {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    padding: 9px 11px 8px;
-    border-radius: 2px;
-  }
+    body {
+      font-family: var(--body-font-family);
+      font-size: var(--body-font-size);
+      font-weight: var(--body-font-weight);
+      line-height: var(--body-line-height);
+      color: var(--body-color);
+      background-color: #f7f9fb;
+      padding: var(--spacing-xl);
+      min-height: 100vh;
+    }
 
-  .readout-label {
-    font-family: var(--mono);
-    font-size: 0.58rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    margin-bottom: 3px;
-  }
+    /* ============================================================
+       TYPOGRAPHY STYLES
+       ============================================================ */
+    .title-container {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--color-primary);
+      padding-bottom: var(--spacing-md);
+    }
 
-  .readout-value {
-    font-family: var(--mono);
-    font-size: 1.15rem;
-    font-weight: 400;
-    color: var(--text);
-    line-height: 1.1;
-  }
+    .main-heading {
+      font-family: var(--heading-font-family);
+      font-size: clamp(48px, 6vw, var(--heading-font-size));
+      font-weight: var(--heading-font-weight);
+      line-height: clamp(48px, 6vw, var(--heading-line-height));
+      letter-spacing: var(--heading-letter-spacing);
+      color: var(--heading-color);
+      text-transform: var(--heading-text-transform);
+      margin: 0;
+    }
 
-  .readout-value.cl-active { color: var(--accent); }
-  .readout-value.cl-stall  { color: var(--stall2); }
-  .readout-value.cd-color  { color: var(--gold); }
-  .readout-value.ld-color  { color: var(--ok); }
+    .sub-heading {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--color-primary);
+      text-transform: uppercase;
+      margin-top: var(--spacing-xs);
+    }
 
-  /* ── CONTROLS ────────────────────────────────── */
-  .control-group { margin-bottom: 14px; }
+    /* ============================================================
+       GRID SYSTEM
+       ============================================================ */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--spacing-lg);
+    }
 
-  .control-label {
-    font-family: var(--sans);
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 0.03em;
-    margin-bottom: 6px;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
+    @media (min-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 3fr 2fr;
+      }
+    }
 
-  .control-label .cur-val {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--text);
-  }
+    /* ============================================================
+       CARD STYLES
+       ============================================================ */
+    .card {
+      background: var(--card-bg);
+      border: var(--card-border);
+      border-radius: var(--card-border-radius);
+      padding: var(--card-padding);
+      box-shadow: var(--card-box-shadow);
+      transition: var(--card-transition);
+      margin-bottom: var(--spacing-md);
+      position: relative;
+    }
 
-  input[type=range] {
-    width: 100%;
-    appearance: none;
-    height: 2px;
-    background: var(--border2);
-    outline: none;
-    cursor: pointer;
-    border-radius: 1px;
-  }
+    .card-title {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-primary);
+      border-bottom: 1px solid var(--alpha-overlay);
+      padding-bottom: var(--spacing-xs);
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-  input[type=range]::-webkit-slider-thumb {
-    appearance: none;
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid var(--bg);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
+    /* ============================================================
+       CANVAS CONTAINER
+       ============================================================ */
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border: 2px solid var(--color-primary);
+      overflow: hidden;
+      aspect-ratio: 2 / 1;
+    }
 
-  input[type=range]::-moz-range-thumb {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid var(--bg);
-  }
+    .canvas-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
 
-  .range-ends {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--mono);
-    font-size: 0.57rem;
-    color: var(--muted2);
-    margin-top: 3px;
-  }
+    .canvas-overlay-indicator {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+    }
 
-  /* ── BUTTONS ─────────────────────────────────── */
-  .btn {
-    width: 100%;
-    padding: 8px 12px;
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.15s, border-color 0.15s;
-    margin-top: 5px;
-    text-align: left;
-  }
+    /* ============================================================
+       BUTTONS
+       ============================================================ */
+    button {
+      font-family: var(--btn-font-family);
+      font-size: var(--btn-font-size);
+      font-weight: var(--btn-font-weight);
+      line-height: var(--btn-line-height);
+      letter-spacing: var(--btn-letter-spacing);
+      text-transform: var(--btn-text-transform);
+      color: var(--btn-color);
+      background: var(--btn-bg);
+      border: var(--btn-border);
+      border-radius: var(--btn-border-radius);
+      padding: var(--btn-padding);
+      transition: var(--btn-transition);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
 
-  .btn:hover {
-    background: var(--panel2);
-    border-color: var(--muted);
-  }
+    button:hover {
+      background: var(--color-primary);
+      color: var(--color-primary-fg);
+    }
 
-  .btn.run-btn {
-    border-color: rgba(107,155,210,0.5);
-    color: var(--accent);
-  }
+    button:active {
+      transform: translateY(1px);
+    }
 
-  .btn.run-btn:hover {
-    background: rgba(107,155,210,0.06);
-    border-color: var(--accent);
-  }
+    /* Shimmer effect helper */
+    .shimmer-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      transform: var(--shimmer-hover-after-transform);
+      transition: 0.5s;
+    }
 
-  .btn.running {
-    border-color: rgba(196,163,90,0.5);
-    color: var(--gold);
-  }
+    .shimmer-btn:hover::after {
+      transform: var(--shimmer-hover-transform);
+    }
 
-  .btn.running:hover {
-    background: rgba(196,163,90,0.06);
-  }
+    .control-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
 
-  .btn.reset-btn {
-    color: var(--muted);
-    font-size: 0.68rem;
-    padding: 6px 12px;
-  }
+    .btn-danger {
+      --btn-color: #b91c1c;
+      --btn-border: 2px solid #b91c1c;
+    }
+    .btn-danger:hover {
+      background: #b91c1c;
+      color: #ffffff;
+    }
 
-  /* ── STALL NOTICE ───────────────────────────── */
-  .stall-warning {
-    background: rgba(184,64,64,0.07);
-    border: 1px solid rgba(184,64,64,0.35);
-    border-radius: 2px;
-    padding: 9px 11px;
-    font-family: var(--sans);
-    font-size: 0.68rem;
-    color: var(--stall2);
-    display: none;
-    line-height: 1.5;
-    margin-top: 10px;
-  }
+    /* ============================================================
+       FORM CONTROLS & SLIDERS
+       ============================================================ */
+    .form-group {
+      margin-bottom: var(--spacing-md);
+    }
 
-  .stall-warning.visible { display: block; }
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      margin-bottom: 4px;
+    }
 
-  .stall-warning strong {
-    font-weight: 600;
-    display: block;
-    margin-bottom: 2px;
-  }
+    .label-val {
+      font-family: var(--font-mono);
+      color: var(--accent);
+    }
 
-  /* ── META INFO BAR ──────────────────────────── */
-  .info-panel {
-    grid-column: 2;
-    padding: 10px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    gap: 0;
-    align-items: center;
-    background: var(--panel2);
-  }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #cee5f2;
+      border: 1px solid #536b78;
+      outline: none;
+      margin: 10px 0;
+    }
 
-  .info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0 20px;
-    border-right: 1px solid var(--border);
-  }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 20px;
+      background: #536b78;
+      cursor: pointer;
+      border-radius: 0px;
+      border: 1px solid #cee5f2;
+    }
 
-  .info-item:first-child { padding-left: 0; }
-  .info-item:last-child  { border-right: none; }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 20px;
+      background: #536b78;
+      cursor: pointer;
+      border-radius: 0px;
+      border: 1px solid #cee5f2;
+    }
 
-  .info-item-label {
-    font-family: var(--mono);
-    font-size: 0.57rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+    select {
+      width: 100%;
+      background: #ffffff;
+      border: 2px solid var(--color-primary);
+      border-radius: 0px;
+      padding: var(--spacing-sm);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-primary);
+      outline: none;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
 
-  .info-item-val {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--text);
-  }
+    select:focus {
+      border-color: var(--accent);
+    }
 
-  /* ── CHART AREA ─────────────────────────────── */
-  .chart-container {
-    grid-column: 2;
-    grid-row: 2;
-    background: var(--panel);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+    /* ============================================================
+       TELEMETRY & STATS
+       ============================================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+    }
 
-  .chart-header {
-    padding: 12px 24px 8px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-  }
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .sidebar-column .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
 
-  .chart-title {
-    font-family: var(--serif);
-    font-size: 0.85rem;
-    font-weight: 400;
-    color: var(--text);
-    font-style: italic;
-  }
+    .stat-box {
+      border: 1px solid var(--color-primary);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: #fdfdfd;
+      text-align: left;
+    }
 
-  .chart-subtitle {
-    font-family: var(--mono);
-    font-size: 0.58rem;
-    color: var(--muted);
-    letter-spacing: 0.06em;
-  }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      margin-bottom: 2px;
+    }
 
-  .chart-inner {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    padding: 16px 16px 8px 4px;
-  }
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
 
-  #chartCanvas { display: block; }
+    .stall-warning {
+      background: #fee2e2 !important;
+      border-color: #ef4444 !important;
+    }
+    .stall-warning .stat-label {
+      color: #b91c1c;
+    }
+    .stall-warning .stat-value {
+      color: #b91c1c;
+    }
 
-  /* ── DATA TABLE ─────────────────────────────── */
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.67rem;
-  }
+    /* ============================================================
+       LIVE Cp PLOT CANVAS
+       ============================================================ */
+    .cp-plot-container {
+      width: 100%;
+      height: 160px;
+      background: #ffffff;
+      border: 1px solid var(--color-primary);
+      position: relative;
+    }
 
-  .data-table th {
-    font-family: var(--mono);
-    font-size: 0.56rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-align: right;
-    border-bottom: 1px solid var(--border);
-    padding: 4px 10px;
-    text-transform: uppercase;
-    font-weight: 400;
-  }
+    .cp-plot-container canvas {
+      width: 100%;
+      height: 100%;
+    }
 
-  .data-table td {
-    padding: 3px 10px;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--mono);
-    font-size: 0.67rem;
-    color: var(--text);
-    text-align: right;
-  }
+    /* ============================================================
+       BANNER & ALERTS
+       ============================================================ */
+    .banner {
+      background: var(--banner-bg);
+      border-left: var(--banner-border-left);
+      padding: var(--banner-padding);
+      margin-top: var(--banner-margin-top);
+      margin-bottom: var(--banner-margin-bottom);
+      border-radius: var(--banner-border-radius);
+      box-shadow: var(--card-box-shadow);
+      border: 2px solid var(--color-primary);
+      border-left-width: 6px;
+    }
 
-  .data-table tr:hover td { background: rgba(107,155,210,0.04); }
-  .stall-row td { color: var(--stall2) !important; }
-</style>
+    .banner-title {
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .banner-content {
+      font-size: 13px;
+      color: #374151;
+      line-height: 20px;
+    }
+
+    .banner-content code {
+      font-family: var(--font-mono);
+      background: #eef2f6;
+      padding: 2px 4px;
+      font-size: 12px;
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    footer {
+      text-align: center;
+      margin-top: var(--spacing-2xl);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-primary);
+      border-top: 1px solid var(--color-primary);
+      padding-top: var(--spacing-md);
+    }
+
+    /* ============================================================
+       BADGES
+       ============================================================ */
+    .badge {
+      font-family: var(--badge-font-family);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+      line-height: var(--badge-line-height);
+      letter-spacing: var(--badge-letter-spacing);
+      text-transform: var(--badge-text-transform);
+      color: var(--badge-color);
+      background: var(--badge-bg);
+      padding: var(--badge-padding);
+      border-radius: var(--badge-border-radius);
+      display: inline-block;
+    }
+
+    /* Interactive Instruction Badge */
+    .badge-interactive {
+      background: #0284c7;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.9; }
+      50% { opacity: 1; transform: scale(1.02); }
+      100% { opacity: 0.9; }
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <div class="header-left">
-    <div class="logo">NACA 0012 &mdash; <em>Interactive Aerodynamic Analysis</em></div>
-    <div class="sim-note">Simulation only — approximate flow and coefficient trends.</div>
-  </div>
-</header>
-
-<main>
-  <!-- LEFT PANEL -->
-  <div class="panel left-panel">
-
-    <div class="section-title">Airfoil Geometry</div>
-    <canvas id="airfoilCanvas" width="264" height="150"></canvas>
-
-    <div class="section-title" style="margin-top:16px;">Aerodynamic Coefficients</div>
-    <div class="readout-grid">
-      <div class="readout">
-        <div class="readout-label">C<sub>L</sub> — Lift</div>
-        <div class="readout-value cl-active" id="clVal">0.0000</div>
-      </div>
-      <div class="readout">
-        <div class="readout-label">C<sub>D</sub> — Drag</div>
-        <div class="readout-value cd-color" id="cdVal">0.00000</div>
-      </div>
-      <div class="readout">
-        <div class="readout-label">L/D Ratio</div>
-        <div class="readout-value ld-color" id="ldVal">—</div>
-      </div>
-      <div class="readout">
-        <div class="readout-label">Alpha (α)</div>
-        <div class="readout-value" id="aVal">0.0°</div>
-      </div>
-    </div>
-
-    <div class="stall-warning" id="stallWarning">
-      <strong>Flow Separation Detected</strong>
-      Attached flow predicted to separate above α ≈ <span id="stallAngle">15°</span>. C<sub>L</sub> values are post-stall approximations.
-    </div>
-
-    <div class="section-title">Simulation Parameters</div>
-
-    <div class="control-group">
-      <label class="control-label">
-        Angle of Attack (α)
-        <span class="cur-val" id="alphaDisplay">0.0°</span>
-      </label>
-      <input type="range" id="alphaSlider" min="-20" max="25" step="0.5" value="0">
-      <div class="range-ends"><span>−20°</span><span>+25°</span></div>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">
-        Reynolds Number
-        <span class="cur-val" id="reDisplay">1.0 × 10⁶</span>
-      </label>
-      <input type="range" id="reSlider" min="0.5" max="6" step="0.5" value="1">
-      <div class="range-ends"><span>0.5M</span><span>6.0M</span></div>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">
-        Sweep Resolution
-        <span class="cur-val" id="stepDisplay">1.0°/step</span>
-      </label>
-      <input type="range" id="stepSlider" min="0.5" max="2" step="0.5" value="1">
-      <div class="range-ends"><span>0.5°</span><span>2.0°</span></div>
-    </div>
-
-    <button class="btn run-btn" id="sweepBtn" onclick="runSweep()">▶  Run α-Sweep (−20° → +25°)</button>
-    <button class="btn reset-btn" onclick="resetSim()">↺  Reset to Defaults</button>
-
+  <!-- Header -->
+  <div class="title-container">
+    <h1 class="main-heading">NACA 0012</h1>
+    <div class="sub-heading">Real-Time Interactive 2D CFD Wind Tunnel</div>
   </div>
 
-  <!-- META INFO BAR -->
-  <div class="info-panel">
-    <div class="info-item">
-      <span class="info-item-label">Profile</span>
-      <span class="info-item-val">NACA 0012</span>
+  <!-- Dashboard -->
+  <div class="dashboard-grid">
+
+    <!-- Left Column: Simulation & Telemetry Graph -->
+    <div class="main-column">
+      
+      <!-- Simulation Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>Wind Tunnel Visualizer</span>
+          <span class="badge badge-interactive">Drag Mouse to Inject Ink</span>
+        </div>
+        
+        <div class="canvas-container" id="canvas-wrapper">
+          <canvas id="simCanvas"></canvas>
+          <div class="canvas-overlay-indicator" id="theme-indicator">LATTICE BOLTZMANN SOLVER</div>
+        </div>
+
+        <!-- Playback controls -->
+        <div class="control-actions">
+          <button id="btn-play-pause" class="shimmer-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <span>Pause</span>
+          </button>
+          <button id="btn-step" class="shimmer-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <span>Step Frame</span>
+          </button>
+          <button id="btn-reset-particles" class="shimmer-btn">
+            <span>Clear Ink</span>
+          </button>
+          <button id="btn-reset" class="shimmer-btn btn-danger">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>Reset Wind Tunnel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Cp Plot Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>Chordwise Pressure Distribution</span>
+          <span class="badge" style="background:#536b78;">-Cp vs Chord %</span>
+        </div>
+        <div class="cp-plot-container">
+          <canvas id="cpCanvas"></canvas>
+        </div>
+      </div>
+
     </div>
-    <div class="info-item">
-      <span class="info-item-label">Chord</span>
-      <span class="info-item-val">1.00 m</span>
+
+    <!-- Right Column: Sidebar Controls & Metrics -->
+    <div class="sidebar-column">
+
+      <!-- Real-Time Metrics -->
+      <div class="card">
+        <div class="card-title">Live Telemetry</div>
+        <div class="stats-grid">
+          <div class="stat-box" id="lift-box">
+            <div class="stat-label">Lift Coeff (C<sub>l</sub>)</div>
+            <div class="stat-value" id="val-cl">0.00</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Performance</div>
+            <div class="stat-value" id="val-fps">00 FPS</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Reynolds (Re)</div>
+            <div class="stat-value" id="val-re">150</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Stall State</div>
+            <div class="stat-value" id="val-stall" style="font-size: 14px; text-transform: uppercase;">Normal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parameters Card -->
+      <div class="card">
+        <div class="card-title">Wind Tunnel Configurations</div>
+        
+        <!-- AoA Slider -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>Angle of Attack (AoA)</span>
+            <span class="label-val" id="lbl-aoa">0°</span>
+          </div>
+          <input type="range" id="slide-aoa" min="-20" max="20" value="0" step="1">
+        </div>
+
+        <!-- Reynolds Slider -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>Viscosity / Reynolds</span>
+            <span class="label-val" id="lbl-re">Re = 150</span>
+          </div>
+          <input type="range" id="slide-re" min="50" max="800" value="150" step="10">
+        </div>
+
+        <!-- Velocity Slider -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>Inlet Velocity (u<sub>0</sub>)</span>
+            <span class="label-val" id="lbl-u0">0.05</span>
+          </div>
+          <input type="range" id="slide-u0" min="0.01" max="0.08" value="0.05" step="0.005">
+        </div>
+
+        <!-- Visualizers configuration -->
+        <div class="form-group">
+          <div class="label-row">Background Field</div>
+          <select id="select-bg-field">
+            <option value="velocity" selected>Velocity Magnitude</option>
+            <option value="pressure">Pressure Distribution</option>
+            <option value="vorticity">Vorticity Field (Wake Shedding)</option>
+            <option value="none">None (Clean Background)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">Visual Overlay</div>
+          <select id="select-overlay">
+            <option value="particles" selected>Flow Tracing Particles</option>
+            <option value="streamlines">Static Streamlines</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">Tunnel Design theme</div>
+          <select id="select-theme">
+            <option value="light" selected>Light Canvas</option>
+            <option value="dark">Dark Canvas</option>
+          </select>
+        </div>
+
+        <!-- Tracing details -->
+        <div class="form-group" id="group-particles">
+          <div class="label-row">
+            <span>Max Tracing Particles</span>
+            <span class="label-val" id="lbl-particles">1200</span>
+          </div>
+          <input type="range" id="slide-particles" min="200" max="2500" value="1200" step="100">
+        </div>
+
+      </div>
+
     </div>
-    <div class="info-item">
-      <span class="info-item-label">Span</span>
-      <span class="info-item-val">∞ (2D)</span>
-    </div>
-    <div class="info-item">
-      <span class="info-item-label">Max Thickness</span>
-      <span class="info-item-val">12% chord</span>
-    </div>
-    <div class="info-item">
-      <span class="info-item-label">Method</span>
-      <span class="info-item-val">Viscous Empirical v2.1</span>
-    </div>
-    <div class="info-item">
-      <span class="info-item-label">Stall Model</span>
-      <span class="info-item-val" id="stallModelDisplay">Re-dep. + Hysteresis</span>
+
+  </div>
+
+  <!-- Banner / Physics Note -->
+  <div class="banner">
+    <div class="banner-title">Aerodynamic Context & Solver Physics</div>
+    <div class="banner-content">
+      <strong>NACA 0012 Airfoil Profile:</strong> Calculated dynamically via half-thickness 
+      <code>y_t = 0.5946895√x - 0.126x - 0.3516x² + 0.2843x³ - 0.1015x⁴</code>. Adjusting the Angle of Attack rotates the 
+      solid boundary cells around the leading edge, regenerating the obstacle mask instantly.<br><br>
+      <strong>Lattice Boltzmann Method (LBM D2Q9):</strong> Solving particle probability distributions 
+      <code>f<sub>i</sub>(x, t)</code> on a structured lattice grid. Standard bounce-back boundary condition is 
+      applied on the airfoil surface to achieve no-slip. Zou-He velocity boundaries drive the flow at the inlet (left), 
+      while zero-gradient convective extrapolation stabilizes the exit (right). A local <strong>Smagorinsky Subgrid Scale LES Model</strong> 
+      is active to stabilize wake shedding and prevent numerical blowups (<code>NaN</code> instabilities) at high Reynolds numbers.
     </div>
   </div>
 
-  <!-- CHART AREA -->
-  <div class="chart-container">
-    <div class="chart-header">
-      <span class="chart-title">C<sub>L</sub> vs α polar — NACA 0012</span>
-      <span class="chart-subtitle">Run sweep to generate full polar · current position shown as marker</span>
-    </div>
-    <div class="chart-inner">
-      <canvas id="chartCanvas"></canvas>
-    </div>
-  </div>
-</main>
+  <footer>
+    AeroDyn 2D Solver Core — Developed with LBM D2Q9 & Smagorinsky Turbulence Closures. Runs entirely client-side.
+  </footer>
 
-<script>
-// ==================== PHYSICS (v2.1 — corrected 2D model) ====================
-function naca0012Y(x) {
-  return 0.6 * (0.2969*Math.sqrt(x) - 0.1260*x - 0.3516*x*x + 0.2843*x*x*x - 0.1015*x*x*x*x);
-}
+  <!-- ============================================================
+       SIMULATION ENGINE LOGIC
+       ============================================================ */ -->
+  <script>
+    // Grid dimensions
+    const Nx = 150;
+    const Ny = 75;
+    const numCells = Nx * Ny;
 
-function liftSlope(Re) {
-  const reLog = Math.log10(Re / 1e6);
-  return (5.73 + 0.12 * Math.min(reLog, 1.4)) * (Math.PI / 180);
-}
+    // Simulation settings & parameters (isolated state)
+    let aoa = 0;           // Angle of Attack (degrees)
+    let Re = 150;          // Reynolds number
+    let u0 = 0.05;         // Inlet velocity
+    let isPaused = false;
+    let bgFieldType = 'velocity'; // velocity, pressure, vorticity, none
+    let overlayType = 'particles';  // particles, streamlines, none
+    let canvasTheme = 'light';    // light, dark
+    let maxParticles = 1200;
 
-function stallAngles(Re) {
-  let onset;
-  if (Re < 1e6)       onset = 11.0 + 3.5 * (Re / 1e6);
-  else if (Re < 3e6)  onset = 14.5 + 1.0 * ((Re - 1e6) / 2e6);
-  else                onset = 15.5 + 1.0 * Math.min((Re - 3e6) / 3e6, 1.0);
-  const recovery = onset - 2.0;
-  return { onset, recovery };
-}
+    // Derived solver values
+    const chord = 40;       // Airfoil chord length in lattice units
+    const xc = 35;          // Airfoil leading edge x-coordinate
+    const yc = Math.floor(Ny / 2); // Airfoil leading edge y-coordinate
+    let viscosity = (u0 * chord) / Re;
+    let tau = 3.0 * viscosity + 0.5;
 
-let _inStallHyst = false;
+    // D2Q9 Weights and velocities
+    const w = new Float32Array([4/9, 1/9, 1/9, 1/9, 1/9, 1/36, 1/36, 1/36, 1/36]);
+    const cx = new Int32Array([0, 1, 0, -1, 0, 1, -1, -1, 1]);
+    const cy = new Int32Array([0, 0, 1, 0, -1, 1, 1, -1, -1]);
+    const opp = new Int32Array([0, 3, 4, 1, 2, 7, 8, 5, 6]);
 
-function computeCL(alpha_deg, Re) {
-  const { onset, recovery } = stallAngles(Re);
-  const absA = Math.abs(alpha_deg);
-  const sign  = Math.sign(alpha_deg) || 1;
+    // Solver double-buffers
+    let f0 = new Float32Array(numCells);
+    let f1 = new Float32Array(numCells);
+    let f2 = new Float32Array(numCells);
+    let f3 = new Float32Array(numCells);
+    let f4 = new Float32Array(numCells);
+    let f5 = new Float32Array(numCells);
+    let f6 = new Float32Array(numCells);
+    let f7 = new Float32Array(numCells);
+    let f8 = new Float32Array(numCells);
 
-  if (absA > onset)    _inStallHyst = true;
-  if (absA < recovery) _inStallHyst = false;
+    let f0_new = new Float32Array(numCells);
+    let f1_new = new Float32Array(numCells);
+    let f2_new = new Float32Array(numCells);
+    let f3_new = new Float32Array(numCells);
+    let f4_new = new Float32Array(numCells);
+    let f5_new = new Float32Array(numCells);
+    let f6_new = new Float32Array(numCells);
+    let f7_new = new Float32Array(numCells);
+    let f8_new = new Float32Array(numCells);
 
-  const slope = liftSlope(Re);
+    // Macroscopic grids
+    const u_x_grid = new Float32Array(numCells);
+    const u_y_grid = new Float32Array(numCells);
+    const rho_grid = new Float32Array(numCells);
+    const solid = new Uint8Array(numCells);
 
-  if (!_inStallHyst) {
-    const clBase = slope * alpha_deg;
-    const t = absA / onset;
-    const droop = t > 0.75 ? 0.030 * ((t - 0.75) / 0.25) ** 1.8 : 0;
-    return clBase * (1 - droop);
-  } else {
-    const clAtStall = slope * onset * 0.97;
-    const plateau   = clAtStall * 0.68;
-    const excess    = absA - onset;
-    let clPost;
-    if (excess < 3) {
-      clPost = clAtStall - (clAtStall - plateau) * (excess / 3);
-    } else if (excess < 12) {
-      clPost = Math.max(plateau - 0.015 * (excess - 3), 0.55);
-    } else {
-      const a = absA * Math.PI / 180;
-      clPost = 2 * Math.sin(a) * Math.cos(a);
+    // Tracing particles
+    const maxParticlesLimit = 2500;
+    const p_x = new Float32Array(maxParticlesLimit);
+    const p_y = new Float32Array(maxParticlesLimit);
+    const p_life = new Float32Array(maxParticlesLimit);
+
+    // Live color LUTs (precomputed 32-bit pixel data)
+    let velocityLUT = new Uint32Array(256);
+    let pressureLUT = new Uint32Array(256);
+    let vorticityLUT = new Uint32Array(256);
+
+    // HTML Elements
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const cpCanvas = document.getElementById('cpCanvas');
+    const cpCtx = cpCanvas.getContext('2d');
+
+    // Setup high-DPI scaling for canvases
+    function setupCanvasDPI(c) {
+      const rect = c.getBoundingClientRect();
+      const dpi = window.devicePixelRatio || 1;
+      c.width = rect.width * dpi;
+      c.height = rect.height * dpi;
+      const context = c.getContext('2d');
+      context.scale(dpi, dpi);
+      return { width: rect.width, height: rect.height };
     }
-    return sign * clPost;
-  }
-}
 
-function computeCD(alpha_deg, Re, cl) {
-  const { onset } = stallAngles(Re);
-  const absA = Math.abs(alpha_deg);
+    let simSize = setupCanvasDPI(canvas);
+    let cpSize = setupCanvasDPI(cpCanvas);
 
-  const xtr = Math.max(0.05, 0.7 - 0.05 * Math.log10(Re / 5e5) - 0.012 * absA);
-  const Rext = Re * xtr;
-  const cf_lam  = 1.328 / Math.sqrt(Math.max(Rext, 1e4));
-  const cf_turb = 0.074 / Math.pow(Re, 0.2);
-  const cf = xtr * cf_lam + (1 - xtr) * cf_turb;
+    window.addEventListener('resize', () => {
+      simSize = setupCanvasDPI(canvas);
+      cpSize = setupCanvasDPI(cpCanvas);
+    });
 
-  const t_c = 0.12;
-  const cd_friction = 2 * cf * (1 + 2.0 * t_c + 60 * t_c ** 4);
+    // Offscreen LBM pixel buffer
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = Nx;
+    offscreenCanvas.height = Ny;
+    const offCtx = offscreenCanvas.getContext('2d');
+    const offImg = offCtx.createImageData(Nx, Ny);
+    const offBuf = new ArrayBuffer(Nx * Ny * 4);
+    const offBuf8 = new Uint8ClampedArray(offBuf);
+    const offBuf32 = new Uint32Array(offBuf);
 
-  const cd_pressure = 4.5e-5 * alpha_deg * alpha_deg * (1 + 0.008 * absA);
+    // ============================================================
+    // AIRFOIL GEOMETRY
+    // ============================================================
+    function updateSolidMask() {
+      solid.fill(0);
+      const rad = (aoa * Math.PI) / 180;
+      const cosA = Math.cos(rad);
+      const sinA = Math.sin(rad);
 
-  let cd_stall = 0;
-  if (absA > onset) {
-    const excess  = absA - onset;
-    const a_rad   = absA * Math.PI / 180;
-    const cd_bluff = 2.0 * Math.sin(a_rad) ** 2;
-    const blend    = Math.min(excess / 15, 1.0);
-    cd_stall = blend * (cd_bluff - cd_friction - cd_pressure);
-    cd_stall = Math.max(cd_stall, 0);
-  }
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const dx = x - xc;
+          const dy = y - yc;
 
-  return cd_friction + cd_pressure + cd_stall;
-}
+          // Rotate coordinate system back to airfoil frame
+          const rx = dx * cosA + dy * sinA;
+          const ry = -dx * sinA + dy * cosA;
 
-// ==================== STATE ====================
-let sweepData = [];
-let currentAlpha = 0;
-let sweepRunning = false;
-let sweepIntervalId = null;
-
-function getRe() { return parseFloat(document.getElementById('reSlider').value) * 1e6; }
-function getStep() { return parseFloat(document.getElementById('stepSlider').value); }
-
-// ==================== AIRFOIL DRAW ====================
-function drawAirfoil(alpha_deg) {
-  const c = document.getElementById('airfoilCanvas');
-  const ctx = c.getContext('2d');
-  const W = c.width, H = c.height;
-  ctx.clearRect(0,0,W,H);
-
-  // Background
-  ctx.fillStyle = '#0c0e14';
-  ctx.fillRect(0,0,W,H);
-
-  // Subtle grid
-  ctx.strokeStyle = 'rgba(31,37,53,0.8)';
-  ctx.lineWidth = 0.5;
-  for (let x=0; x<W; x+=20) {
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-  }
-  for (let y=0; y<H; y+=20) {
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-  }
-
-  const cx = W/2, cy = H/2;
-  const scale = W * 0.62;
-  const rad = alpha_deg * Math.PI / 180;
-
-  const N = 100;
-  const upperPts = [], lowerPts = [];
-  for (let i=0; i<=N; i++) {
-    const x = i/N;
-    const y = naca0012Y(x);
-    upperPts.push([x - 0.25, y]);
-    lowerPts.push([x - 0.25, -y]);
-  }
-
-  function rotate([px,py]) {
-    return [
-      cx + (px*Math.cos(rad) - py*Math.sin(rad)) * scale,
-      cy + (px*Math.sin(rad) + py*Math.cos(rad)) * scale * 0.8
-    ];
-  }
-
-  // Fill
-  ctx.beginPath();
-  ctx.moveTo(...rotate(upperPts[0]));
-  for (const pt of upperPts) ctx.lineTo(...rotate(pt));
-  for (let i = lowerPts.length-1; i>=0; i--) ctx.lineTo(...rotate(lowerPts[i]));
-  ctx.closePath();
-  ctx.fillStyle = '#181e2e';
-  ctx.fill();
-
-  // Stroke
-  const absA = Math.abs(alpha_deg);
-  const Re = getRe();
-  const { onset: stallA } = stallAngles(Re);
-  const inStall = absA > stallA;
-  ctx.strokeStyle = inStall ? '#b84040' : '#6b9bd2';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-
-  // Chord line
-  ctx.beginPath();
-  ctx.moveTo(...rotate([-0.25, 0]));
-  ctx.lineTo(...rotate([0.75, 0]));
-  ctx.strokeStyle = 'rgba(107,155,210,0.18)';
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([4,5]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Freestream arrows
-  for (let i=0; i<5; i++) {
-    const y0 = cy - 48 + i*20;
-    ctx.beginPath();
-    ctx.moveTo(12, y0); ctx.lineTo(30, y0);
-    ctx.moveTo(25, y0-3); ctx.lineTo(30, y0); ctx.lineTo(25, y0+3);
-    ctx.strokeStyle = 'rgba(107,155,210,0.14)';
-    ctx.lineWidth = 0.7;
-    ctx.stroke();
-  }
-
-  // Alpha label
-  ctx.font = '500 10px "JetBrains Mono", monospace';
-  ctx.fillStyle = inStall ? '#b84040' : '#5a6278';
-  ctx.fillText('α = ' + alpha_deg.toFixed(1) + '°', 7, H - 7);
-}
-
-// ==================== CHART ====================
-function drawChart() {
-  const canvas = document.getElementById('chartCanvas');
-  const container = canvas.parentElement;
-  canvas.width  = container.clientWidth  - 2;
-  canvas.height = container.clientHeight - 2;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-
-  const PAD = { top:28, right:28, bottom:46, left:52 };
-  const cW = W - PAD.left - PAD.right;
-  const cH = H - PAD.top  - PAD.bottom;
-
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = '#0c0e14';
-  ctx.fillRect(0,0,W,H);
-
-  const xMin=-20, xMax=25, yMin=-1.8, yMax=1.8;
-  const xScale = v => PAD.left + (v - xMin)/(xMax-xMin) * cW;
-  const yScale = v => PAD.top  + (yMax-v)/(yMax-yMin) * cH;
-
-  // Minor grid
-  ctx.setLineDash([1,4]);
-  ctx.lineWidth = 0.5;
-  for (let x=-20; x<=25; x+=5) {
-    ctx.beginPath(); ctx.moveTo(xScale(x), PAD.top); ctx.lineTo(xScale(x), PAD.top+cH);
-    ctx.strokeStyle = '#1a1f2e'; ctx.stroke();
-  }
-  for (let y=-1.5; y<=1.5; y+=0.5) {
-    ctx.beginPath(); ctx.moveTo(PAD.left, yScale(y)); ctx.lineTo(PAD.left+cW, yScale(y));
-    ctx.strokeStyle = y===0 ? '#252d40' : '#1a1f2e';
-    ctx.lineWidth = y===0 ? 0.8 : 0.5;
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // Axes
-  ctx.strokeStyle = '#2a3250';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(PAD.left, yScale(0)); ctx.lineTo(PAD.left+cW, yScale(0)); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(xScale(0), PAD.top);  ctx.lineTo(xScale(0), PAD.top+cH);  ctx.stroke();
-
-  // Tick labels
-  ctx.fillStyle = '#4a5470';
-  ctx.font = '300 10px "JetBrains Mono", monospace';
-  ctx.textAlign = 'center';
-  for (let x=-20; x<=25; x+=5) {
-    ctx.fillText(x + '°', xScale(x), PAD.top+cH+16);
-  }
-  ctx.textAlign = 'right';
-  for (let y=-1.5; y<=1.5; y+=0.5) {
-    ctx.fillText(y.toFixed(1), PAD.left-8, yScale(y)+3.5);
-  }
-
-  // Axis labels
-  ctx.fillStyle = '#5a6278';
-  ctx.font = '400 11px "JetBrains Mono", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('α (°)', PAD.left + cW/2, H - 7);
-  ctx.save();
-  ctx.translate(11, PAD.top + cH/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('C_L', 0, 0);
-  ctx.restore();
-
-  // Theoretical linear slope (dashed reference)
-  ctx.beginPath();
-  ctx.setLineDash([3,7]);
-  ctx.strokeStyle = 'rgba(107,155,210,0.10)';
-  ctx.lineWidth = 1;
-  const refSlope = liftSlope(getRe());
-  for (let x=-20; x<=25; x++) {
-    const cl = refSlope * x;
-    if (x===-20) ctx.moveTo(xScale(x), yScale(cl));
-    else ctx.lineTo(xScale(x), yScale(cl));
-  }
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  if (sweepData.length < 2) {
-    // No sweep yet — draw placeholder text
-    ctx.fillStyle = '#2a3050';
-    ctx.font = '300 11px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Run α-sweep to generate polar', PAD.left + cW/2, PAD.top + cH/2 - 8);
-    ctx.fillStyle = '#222840';
-    ctx.fillText('Linear reference shown (dashed)', PAD.left + cW/2, PAD.top + cH/2 + 10);
-    // Current point only
-    if (currentAlpha >= xMin && currentAlpha <= xMax) {
-      const cl = computeCL(currentAlpha, getRe());
-      const px = xScale(currentAlpha), py = yScale(cl);
-      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(107,155,210,0.5)'; ctx.fill();
-      ctx.strokeStyle = '#6b9bd2'; ctx.lineWidth = 1; ctx.stroke();
+          if (rx >= 0 && rx <= chord) {
+            const xNorm = rx / chord;
+            // NACA 0012 Symmetrical half-thickness equation
+            const yt = chord * (
+              0.5946895 * Math.sqrt(xNorm) -
+              0.126 * xNorm -
+              0.3516 * xNorm * xNorm +
+              0.2843 * xNorm * xNorm * xNorm -
+              0.1015 * xNorm * xNorm * xNorm * xNorm
+            );
+            if (Math.abs(ry) <= yt) {
+              solid[y * Nx + x] = 1;
+            }
+          }
+        }
+      }
     }
-    return;
-  }
 
-  const Re = getRe();
-  const { onset: stallA } = stallAngles(Re);
-  let stallIdx = sweepData.findIndex(d => d.alpha > stallA);
+    // ============================================================
+    // COLOR PALETTES (LUT PRE-CALCULATIONS)
+    // ============================================================
+    function generateLUTs() {
+      // Helper function to generate Hex colors in Little Endian (ABGR)
+      function rgbTo32(r, g, b, a = 255) {
+        return (a << 24) | (b << 16) | (g << 8) | r;
+      }
 
-  // Subtle fill below curve
-  if (sweepData.length > 2) {
-    const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top+cH);
-    grad.addColorStop(0,   'rgba(107,155,210,0.07)');
-    grad.addColorStop(0.5, 'rgba(107,155,210,0.03)');
-    grad.addColorStop(1,   'rgba(107,155,210,0)');
-    ctx.beginPath();
-    ctx.moveTo(xScale(sweepData[0].alpha), yScale(0));
-    for (const d of sweepData) ctx.lineTo(xScale(d.alpha), yScale(d.cl));
-    ctx.lineTo(xScale(sweepData[sweepData.length-1].alpha), yScale(0));
-    ctx.closePath();
-    ctx.fillStyle = grad; ctx.fill();
-  }
+      for (let i = 0; i < 256; i++) {
+        const t = i / 255;
+        
+        // 1. Velocity Heatmap (Cool to Hot)
+        if (canvasTheme === 'light') {
+          // Light background style: White/Grey -> Teal -> Blue -> Indigo
+          const r = Math.round(240 - 200 * t);
+          const g = Math.round(245 - 140 * t);
+          const b = Math.round(250 - 50 * t);
+          velocityLUT[i] = rgbTo32(r, g, b);
+        } else {
+          // Dark theme: Dark Blue -> Cyan -> Green -> Yellow -> Red
+          let r = 0, g = 0, b = 0;
+          if (t < 0.25) {
+            b = Math.round(t * 4 * 255);
+          } else if (t < 0.5) {
+            g = Math.round((t - 0.25) * 4 * 255);
+            b = 255;
+          } else if (t < 0.75) {
+            r = Math.round((t - 0.5) * 4 * 255);
+            g = 255;
+            b = Math.round((0.75 - t) * 4 * 255);
+          } else {
+            r = 255;
+            g = Math.round((1.0 - t) * 4 * 255);
+          }
+          velocityLUT[i] = rgbTo32(r, g, b);
+        }
 
-  // C_L curve — draw segment by segment with color change at stall
-  ctx.lineWidth = 1.5;
-  sweepData.forEach((d, i) => {
-    if (i === 0) return;
-    const inStall = d.alpha > stallA;
-    ctx.beginPath();
-    ctx.moveTo(xScale(sweepData[i-1].alpha), yScale(sweepData[i-1].cl));
-    ctx.lineTo(xScale(d.alpha), yScale(d.cl));
-    ctx.strokeStyle = inStall ? '#a03838' : '#5b85c0';
-    ctx.stroke();
-  });
+        // 2. Pressure (Diverging: Low=Blue, Mid=Neutral, High=Red)
+        if (canvasTheme === 'light') {
+          // Light: Deep Blue -> Light Blue/Grey -> Deep Red
+          if (t < 0.5) {
+            const nt = t * 2;
+            const r = Math.round(30 + 215 * nt);
+            const g = Math.round(58 + 187 * nt);
+            const b = Math.round(138 + 112 * nt);
+            pressureLUT[i] = rgbTo32(r, g, b);
+          } else {
+            const nt = (t - 0.5) * 2;
+            const r = Math.round(245 + 10 * nt);
+            const g = Math.round(245 - 200 * nt);
+            const b = Math.round(250 - 210 * nt);
+            pressureLUT[i] = rgbTo32(r, g, b);
+          }
+        } else {
+          // Dark: Blue -> Dark Indigo -> Red
+          if (t < 0.5) {
+            const nt = t * 2;
+            const r = Math.round(30 * (1 - nt));
+            const g = Math.round(58 * (1 - nt));
+            const b = Math.round(255 - 230 * nt);
+            pressureLUT[i] = rgbTo32(r, g, b);
+          } else {
+            const nt = (t - 0.5) * 2;
+            const r = Math.round(25 + 230 * nt);
+            const g = 10;
+            const b = Math.round(25 * (1 - nt));
+            pressureLUT[i] = rgbTo32(r, g, b);
+          }
+        }
 
-  // Data points (small, sparse)
-  sweepData.forEach((d, i) => {
-    if (i % 2 !== 0) return;
-    const inStall = d.alpha > stallA;
-    ctx.beginPath();
-    ctx.arc(xScale(d.alpha), yScale(d.cl), 2, 0, Math.PI*2);
-    ctx.fillStyle = inStall ? '#904040' : '#5b8dd9';
-    ctx.fill();
-  });
-
-  // Stall onset marker
-  if (stallIdx > 0 && stallIdx < sweepData.length) {
-    const sd = sweepData[stallIdx-1];
-    const sx = xScale(sd.alpha), sy = yScale(sd.cl);
-
-    // Vertical line at stall
-    ctx.beginPath();
-    ctx.setLineDash([2,5]);
-    ctx.moveTo(sx, PAD.top); ctx.lineTo(sx, PAD.top+cH);
-    ctx.strokeStyle = 'rgba(184,64,64,0.2)'; ctx.lineWidth = 1;
-    ctx.stroke(); ctx.setLineDash([]);
-
-    // Marker circle
-    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(184,64,64,0.7)'; ctx.lineWidth = 1; ctx.stroke();
-
-    // Annotation
-    ctx.fillStyle = '#804040';
-    ctx.font = '300 9.5px "JetBrains Mono", monospace';
-    ctx.textAlign = 'left';
-    const labelX = sx + 9, labelY = sy - 10;
-    ctx.fillText('Stall onset  α ≈ ' + sd.alpha.toFixed(1) + '°', labelX, labelY);
-    ctx.fillText('C_L,max = ' + sd.cl.toFixed(3), labelX, labelY + 12);
-  }
-
-  // Current alpha indicator
-  if (currentAlpha >= xMin && currentAlpha <= xMax) {
-    const cl = computeCL(currentAlpha, getRe());
-    const px = xScale(currentAlpha), py = yScale(cl);
-    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(107,155,210,0.15)'; ctx.fill();
-    ctx.strokeStyle = '#8db4e0'; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-}
-
-// ==================== UPDATE ====================
-function updateReadouts(alpha) {
-  const Re = getRe();
-  const cl = computeCL(alpha, Re);
-  const cd = computeCD(alpha, Re, cl);
-  const ld = Math.abs(cl/cd);
-  const { onset: stallA } = stallAngles(Re);
-  const inStall = Math.abs(alpha) > stallA;
-
-  document.getElementById('clVal').textContent = cl.toFixed(4);
-  document.getElementById('cdVal').textContent = cd.toFixed(5);
-  document.getElementById('ldVal').textContent = isFinite(ld) ? ld.toFixed(2) : '—';
-  document.getElementById('aVal').textContent  = alpha.toFixed(1) + '°';
-
-  const clEl = document.getElementById('clVal');
-  clEl.className = 'readout-value ' + (inStall ? 'cl-stall' : 'cl-active');
-
-  document.getElementById('stallWarning').classList.toggle('visible', inStall);
-  document.getElementById('stallAngle').textContent = stallA.toFixed(1) + '°';
-
-  drawAirfoil(alpha);
-}
-
-function updateAlpha(val) {
-  currentAlpha = parseFloat(val);
-  document.getElementById('alphaDisplay').textContent = currentAlpha.toFixed(1) + '°';
-  updateReadouts(currentAlpha);
-  drawChart();
-}
-
-function formatRe(val) {
-  const v = parseFloat(val);
-  return v.toFixed(1) + ' × 10\u2076';
-}
-
-// ==================== SWEEP ====================
-function runSweep() {
-  if (sweepRunning) {
-    clearInterval(sweepIntervalId);
-    sweepRunning = false;
-    document.getElementById('sweepBtn').textContent = '▶  Run α-Sweep (−20° → +25°)';
-    document.getElementById('sweepBtn').classList.remove('running');
-    document.getElementById('sweepBtn').classList.add('run-btn');
-    return;
-  }
-
-  sweepData = [];
-  sweepRunning = true;
-  const btn = document.getElementById('sweepBtn');
-  btn.textContent = '■  Stop Sweep';
-  btn.classList.remove('run-btn');
-  btn.classList.add('running');
-
-  const step = getStep();
-  const Re = getRe();
-  let alpha = -20;
-
-  sweepIntervalId = setInterval(() => {
-    if (alpha > 25) {
-      clearInterval(sweepIntervalId);
-      sweepRunning = false;
-      btn.textContent = '▶  Re-Run α-Sweep (−20° → +25°)';
-      btn.classList.remove('running');
-      btn.classList.add('run-btn');
-      return;
+        // 3. Vorticity (Diverging: Negative=Cyan/Blue, Mid=Neutral, Positive=Orange/Red)
+        if (canvasTheme === 'light') {
+          // Light theme
+          if (t < 0.5) {
+            const nt = t * 2; // 0 to 1
+            const r = Math.round(2 + 240 * nt);
+            const g = Math.round(132 + 113 * nt);
+            const b = Math.round(199 + 51 * nt);
+            vorticityLUT[i] = rgbTo32(r, g, b);
+          } else {
+            const nt = (t - 0.5) * 2; // 0 to 1
+            const r = Math.round(242 + 13 * nt);
+            const g = Math.round(245 - 188 * nt);
+            const b = Math.round(250 - 220 * nt);
+            vorticityLUT[i] = rgbTo32(r, g, b);
+          }
+        } else {
+          // Dark theme
+          if (t < 0.5) {
+            const nt = t * 2;
+            const r = 0;
+            const g = Math.round(130 * nt);
+            const b = Math.round(100 + 155 * nt);
+            vorticityLUT[i] = rgbTo32(r, g, b);
+          } else {
+            const nt = (t - 0.5) * 2;
+            const r = Math.round(100 + 155 * nt);
+            const g = Math.round(130 * (1 - nt));
+            const b = 0;
+            vorticityLUT[i] = rgbTo32(r, g, b);
+          }
+        }
+      }
     }
-    const cl = computeCL(alpha, Re);
-    const cd = computeCD(alpha, Re, cl);
-    sweepData.push({ alpha, cl, cd });
-    currentAlpha = alpha;
-    document.getElementById('alphaSlider').value = alpha;
-    document.getElementById('alphaDisplay').textContent = alpha.toFixed(1) + '°';
-    updateReadouts(alpha);
-    drawChart();
-    alpha = Math.round((alpha + step)*10)/10;
-  }, 60);
-}
 
-function resetSim() {
-  clearInterval(sweepIntervalId);
-  sweepRunning = false;
-  sweepData = [];
-  currentAlpha = 0;
-  _inStallHyst = false;
-  document.getElementById('alphaSlider').value = 0;
-  document.getElementById('alphaDisplay').textContent = '0.0°';
-  const btn = document.getElementById('sweepBtn');
-  btn.textContent = '▶  Run α-Sweep (−20° → +25°)';
-  btn.classList.remove('running');
-  btn.classList.add('run-btn');
-  updateReadouts(0);
-  drawChart();
-}
+    // ============================================================
+    // SOLVER INITIALIZATION & RESET
+    // ============================================================
+    function initSimulation() {
+      // Re-evaluate parameters
+      viscosity = (u0 * chord) / Re;
+      tau = 3.0 * viscosity + 0.5;
+      
+      updateSolidMask();
+      generateLUTs();
 
-// ==================== EVENTS ====================
-document.getElementById('alphaSlider').addEventListener('input', e => updateAlpha(e.target.value));
+      // Set initial state
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+          const rho = 1.0;
+          const ux = solid[idx] ? 0.0 : u0;
+          const uy = 0.0;
 
-document.getElementById('reSlider').addEventListener('input', e => {
-  document.getElementById('reDisplay').textContent = formatRe(e.target.value);
-  _inStallHyst = false;
-  updateReadouts(currentAlpha);
-  if (sweepData.length) {
-    _inStallHyst = false;
-    sweepData = sweepData.map(d => ({
-      alpha: d.alpha,
-      cl:    computeCL(d.alpha, getRe()),
-      cd:    computeCD(d.alpha, getRe(), computeCL(d.alpha, getRe()))
-    }));
-    const { onset, recovery } = stallAngles(getRe());
-    if (Math.abs(currentAlpha) > onset)         _inStallHyst = true;
-    else if (Math.abs(currentAlpha) < recovery) _inStallHyst = false;
-    drawChart();
-  }
-});
+          u_x_grid[idx] = ux;
+          u_y_grid[idx] = uy;
+          rho_grid[idx] = rho;
 
-document.getElementById('stepSlider').addEventListener('input', e => {
-  document.getElementById('stepDisplay').textContent = parseFloat(e.target.value).toFixed(1) + '°/step';
-});
+          // Equilibrium distributions
+          const u2 = ux * ux + uy * uy;
+          const u2_15 = 1.5 * u2;
+          const ux3 = 3.0 * ux;
+          const uy3 = 3.0 * uy;
 
-window.addEventListener('resize', drawChart);
+          f0[idx] = f0_new[idx] = (4/9) * rho * (1 - u2_15);
+          f1[idx] = f1_new[idx] = (1/9) * rho * (1 + ux3 + 4.5 * ux * ux - u2_15);
+          f2[idx] = f2_new[idx] = (1/9) * rho * (1 + uy3 + 4.5 * uy * uy - u2_15);
+          f3[idx] = f3_new[idx] = (1/9) * rho * (1 - ux3 + 4.5 * ux * ux - u2_15);
+          f4[idx] = f4_new[idx] = (1/9) * rho * (1 - uy3 + 4.5 * uy * uy - u2_15);
 
-// Init
-updateReadouts(0);
-drawChart();
-</script>
+          const u_plus = ux + uy;
+          const u_minus = -ux + uy;
+          f5[idx] = f5_new[idx] = (1/36) * rho * (1 + 3 * u_plus + 4.5 * u_plus * u_plus - u2_15);
+          f6[idx] = f6_new[idx] = (1/36) * rho * (1 + 3 * u_minus + 4.5 * u_minus * u_minus - u2_15);
+          f7[idx] = f7_new[idx] = (1/36) * rho * (1 - 3 * u_plus + 4.5 * u_plus * u_plus - u2_15);
+          f8[idx] = f8_new[idx] = (1/36) * rho * (1 - 3 * u_minus + 4.5 * u_minus * u_minus - u2_15);
+        }
+      }
+
+      initParticles();
+    }
+
+    function initParticles() {
+      for (let p = 0; p < maxParticlesLimit; p++) {
+        p_x[p] = Math.random() * Nx;
+        p_y[p] = Math.random() * Ny;
+        p_life[p] = Math.random(); // Randomized decay state
+      }
+    }
+
+    // ============================================================
+    // SOLVER INNER STEP (LBM CONCURRENCY SAFE)
+    // ============================================================
+    function solverStep() {
+      // Numerical clamp boundaries to prevent divergence
+      const minRho = 0.2;
+      const maxRho = 2.0;
+      const maxVel = 0.25;
+
+      // Smagorinsky Subgrid Turbulence closure constant
+      const Cs = 0.15;
+      const Cs_sq_18_sqrt2 = 18.0 * Cs * Cs * Math.sqrt(2.0);
+
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+
+          if (solid[idx]) {
+            continue;
+          }
+
+          const f0_val = f0[idx];
+          const f1_val = f1[idx];
+          const f2_val = f2[idx];
+          const f3_val = f3[idx];
+          const f4_val = f4[idx];
+          const f5_val = f5[idx];
+          const f6_val = f6[idx];
+          const f7_val = f7[idx];
+          const f8_val = f8[idx];
+
+          // Compute density
+          let rho = f0_val + f1_val + f2_val + f3_val + f4_val + f5_val + f6_val + f7_val + f8_val;
+          if (rho < minRho) rho = minRho; else if (rho > maxRho) rho = maxRho;
+
+          // Compute velocity
+          let ux = (f1_val - f3_val + f5_val - f6_val - f7_val + f8_val) / rho;
+          let uy = (f2_val - f4_val + f5_val + f6_val - f7_val - f8_val) / rho;
+
+          // Velocity stabilizer clamps
+          if (ux > maxVel) ux = maxVel; else if (ux < -maxVel) ux = -maxVel;
+          if (uy > maxVel) uy = maxVel; else if (uy < -maxVel) uy = -maxVel;
+
+          u_x_grid[idx] = ux;
+          u_y_grid[idx] = uy;
+          rho_grid[idx] = rho;
+
+          // Equilibrium calculations
+          const u2 = ux * ux + uy * uy;
+          const u2_15 = 1.5 * u2;
+          const ux3 = 3.0 * ux;
+          const uy3 = 3.0 * uy;
+
+          const f0_eq = (4.0/9.0) * rho * (1.0 - u2_15);
+          const f1_eq = (1.0/9.0) * rho * (1.0 + ux3 + 4.5 * ux * ux - u2_15);
+          const f2_eq = (1.0/9.0) * rho * (1.0 + uy3 + 4.5 * uy * uy - u2_15);
+          const f3_eq = (1.0/9.0) * rho * (1.0 - ux3 + 4.5 * ux * ux - u2_15);
+          const f4_eq = (1.0/9.0) * rho * (1.0 - uy3 + 4.5 * uy * uy - u2_15);
+
+          const u_plus = ux + uy;
+          const u_minus = -ux + uy;
+          const f5_eq = (1.0/36.0) * rho * (1.0 + 3.0 * u_plus + 4.5 * u_plus * u_plus - u2_15);
+          const f6_eq = (1.0/36.0) * rho * (1.0 + 3.0 * u_minus + 4.5 * u_minus * u_minus - u2_15);
+          const f7_eq = (1.0/36.0) * rho * (1.0 - 3.0 * u_plus + 4.5 * u_plus * u_plus - u2_15);
+          const f8_eq = (1.0/36.0) * rho * (1.0 - 3.0 * u_minus + 4.5 * u_minus * u_minus - u2_15);
+
+          // Smagorinsky Non-Equilibrium Strain tensor calculation
+          const q0 = f0_val - f0_eq;
+          const q1 = f1_val - f1_eq;
+          const q2 = f2_val - f2_eq;
+          const q3 = f3_val - f3_eq;
+          const q4 = f4_val - f4_eq;
+          const q5 = f5_val - f5_eq;
+          const q6 = f6_val - f6_eq;
+          const q7 = f7_val - f7_eq;
+          const q8 = f8_val - f8_eq;
+
+          const Qxx = q1 + q3 + q5 + q6 + q7 + q8;
+          const Qyy = q2 + q4 + q5 + q6 + q7 + q8;
+          const Qxy = q5 - q6 + q7 - q8;
+          const Q_norm = Math.sqrt(Qxx*Qxx + Qyy*Qyy + 2.0 * Qxy*Qxy);
+
+          // Dynamic localized relaxation time (stabilizes subgrid structures)
+          const tau_local = tau + 0.5 * (Math.sqrt(tau*tau + Cs_sq_18_sqrt2 * Q_norm / rho) - tau);
+          const omega_local = 1.0 / tau_local;
+
+          // Collision outputs (Post-collision distribution functions)
+          const f0_star = f0_val + omega_local * (f0_eq - f0_val);
+          const f1_star = f1_val + omega_local * (f1_eq - f1_val);
+          const f2_star = f2_val + omega_local * (f2_eq - f2_val);
+          const f3_star = f3_val + omega_local * (f3_eq - f3_val);
+          const f4_star = f4_val + omega_local * (f4_eq - f4_val);
+          const f5_star = f5_val + omega_local * (f5_eq - f5_val);
+          const f6_star = f6_val + omega_local * (f6_eq - f6_val);
+          const f7_star = f7_val + omega_local * (f7_eq - f7_val);
+          const f8_star = f8_val + omega_local * (f8_eq - f8_val);
+
+          // Streaming & Obstacle Bounce-Back
+          // Direction 0 (Stationary)
+          f0_new[idx] = f0_star;
+
+          // Direction 1 (+x)
+          let nx = x + 1;
+          let ny = y;
+          if (nx < Nx) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f3_new[idx] = f1_star; else f1_new[n_idx] = f1_star;
+          }
+
+          // Direction 2 (+y)
+          nx = x;
+          ny = (y + 1) % Ny;
+          {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f4_new[idx] = f2_star; else f2_new[n_idx] = f2_star;
+          }
+
+          // Direction 3 (-x)
+          nx = x - 1;
+          ny = y;
+          if (nx >= 0) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f1_new[idx] = f3_star; else f3_new[n_idx] = f3_star;
+          }
+
+          // Direction 4 (-y)
+          nx = x;
+          ny = (y - 1 + Ny) % Ny;
+          {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f2_new[idx] = f4_star; else f4_new[n_idx] = f4_star;
+          }
+
+          // Direction 5 (+x, +y)
+          nx = x + 1;
+          ny = (y + 1) % Ny;
+          if (nx < Nx) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f7_new[idx] = f5_star; else f5_new[n_idx] = f5_star;
+          }
+
+          // Direction 6 (-x, +y)
+          nx = x - 1;
+          ny = (y + 1) % Ny;
+          if (nx >= 0) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f8_new[idx] = f6_star; else f6_new[n_idx] = f6_star;
+          }
+
+          // Direction 7 (-x, -y)
+          nx = x - 1;
+          ny = (y - 1 + Ny) % Ny;
+          if (nx >= 0) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f5_new[idx] = f7_star; else f7_new[n_idx] = f7_star;
+          }
+
+          // Direction 8 (+x, -y)
+          nx = x + 1;
+          ny = (y - 1 + Ny) % Ny;
+          if (nx < Nx) {
+            const n_idx = ny * Nx + nx;
+            if (solid[n_idx]) f6_new[idx] = f8_star; else f8_new[n_idx] = f8_star;
+          }
+        }
+      }
+
+      // Zou-He Velocity Inlet at x = 0
+      for (let y = 0; y < Ny; y++) {
+        const idx = y * Nx;
+        const f0_val = f0_new[idx];
+        const f2_val = f2_new[idx];
+        const f4_val = f4_new[idx];
+        const f3_val = f3_new[idx];
+        const f6_val = f6_new[idx];
+        const f7_val = f7_new[idx];
+
+        let rho = (f0_val + f2_val + f4_val + 2.0 * (f3_val + f6_val + f7_val)) / (1.0 - u0);
+        if (rho < minRho) rho = minRho; else if (rho > maxRho) rho = maxRho;
+
+        f1_new[idx] = f3_val + (2.0/3.0) * rho * u0;
+        f5_new[idx] = f7_val - 0.5 * (f2_val - f4_val) + (1.0/6.0) * rho * u0;
+        f8_new[idx] = f6_val + 0.5 * (f2_val - f4_val) + (1.0/6.0) * rho * u0;
+      }
+
+      // Extrapolation Boundary Outlet at x = Nx - 1
+      for (let y = 0; y < Ny; y++) {
+        const idx = y * Nx + (Nx - 1);
+        const idx_neighbor = y * Nx + (Nx - 2);
+        f0_new[idx] = f0_new[idx_neighbor];
+        f1_new[idx] = f1_new[idx_neighbor];
+        f2_new[idx] = f2_new[idx_neighbor];
+        f3_new[idx] = f3_new[idx_neighbor];
+        f4_new[idx] = f4_new[idx_neighbor];
+        f5_new[idx] = f5_new[idx_neighbor];
+        f6_new[idx] = f6_new[idx_neighbor];
+        f7_new[idx] = f7_new[idx_neighbor];
+        f8_new[idx] = f8_new[idx_neighbor];
+      }
+
+      // Buffer swap pointers
+      let temp;
+      temp = f0; f0 = f0_new; f0_new = temp;
+      temp = f1; f1 = f1_new; f1_new = temp;
+      temp = f2; f2 = f2_new; f2_new = temp;
+      temp = f3; f3 = f3_new; f3_new = temp;
+      temp = f4; f4 = f4_new; f4_new = temp;
+      temp = f5; f5 = f5_new; f5_new = temp;
+      temp = f6; f6 = f6_new; f6_new = temp;
+      temp = f7; f7 = f7_new; f7_new = temp;
+      temp = f8; f8 = f8_new; f8_new = temp;
+
+      // Numerical sanity check (auto-reset on divergence)
+      if (isNaN(f0[0])) {
+        console.warn("Numerical divergence detected. Resetting solver...");
+        initSimulation();
+      }
+    }
+
+    // ============================================================
+    // VORTICITY CALCULATION
+    // ============================================================
+    function computeVorticity(x, y) {
+      let xp = x + 1; if (xp >= Nx) xp = Nx - 1;
+      let xm = x - 1; if (xm < 0) xm = 0;
+      let yp = (y + 1) % Ny;
+      let ym = (y - 1 + Ny) % Ny;
+
+      const uy_x = (u_y_grid[y * Nx + xp] - u_y_grid[y * Nx + xm]) * 0.5;
+      const ux_y = (u_x_grid[yp * Nx + x] - u_x_grid[ym * Nx + x]) * 0.5;
+
+      return uy_x - ux_y;
+    }
+
+    // ============================================================
+    // TRACING PARTICLES UPDATE
+    // ============================================================
+    function updateParticles() {
+      const dt = 1.0;
+      for (let p = 0; p < maxParticles; p++) {
+        let px = p_x[p];
+        let py = p_y[p];
+
+        // Bilinear interpolation of velocity field at particle coordinates
+        let x0 = Math.floor(px);
+        let y0 = Math.floor(py);
+        let x1 = x0 + 1;
+        if (x1 >= Nx) x1 = Nx - 1;
+        let y1 = y0 + 1;
+
+        // Periodic wrapping indices
+        const y0_p = (y0 % Ny + Ny) % Ny;
+        const y1_p = (y1 % Ny + Ny) % Ny;
+
+        const tx = px - x0;
+        const ty = py - y0;
+
+        const idx00 = y0_p * Nx + x0;
+        const idx10 = y0_p * Nx + x1;
+        const idx01 = y1_p * Nx + x0;
+        const idx11 = y1_p * Nx + x1;
+
+        const ux = (1 - tx) * (1 - ty) * u_x_grid[idx00] + tx * (1 - ty) * u_x_grid[idx10] + (1 - tx) * ty * u_x_grid[idx01] + tx * ty * u_x_grid[idx11];
+        const uy = (1 - tx) * (1 - ty) * u_y_grid[idx00] + tx * (1 - ty) * u_y_grid[idx10] + (1 - tx) * ty * u_y_grid[idx01] + tx * ty * u_y_grid[idx11];
+
+        // Move particle
+        px += ux * dt;
+        py += uy * dt;
+
+        // Check if inside solid obstacle
+        let hitObstacle = false;
+        const gridX = Math.round(px);
+        const gridY = (Math.round(py) % Ny + Ny) % Ny;
+        if (gridX >= 0 && gridX < Nx) {
+          if (solid[gridY * Nx + gridX]) {
+            hitObstacle = true;
+          }
+        }
+
+        // Decay particle life
+        p_life[p] -= 0.00015 + Math.random() * 0.00015;
+
+        // Reset particle on boundaries, obstacle hit, or decay
+        if (px >= Nx - 1 || px <= 0 || py < 0 || py >= Ny || hitObstacle || p_life[p] <= 0) {
+          p_x[p] = 0;
+          p_y[p] = Math.random() * Ny;
+          p_life[p] = 1.0;
+        } else {
+          p_x[p] = px;
+          p_y[p] = py;
+        }
+      }
+    }
+
+    // ============================================================
+    // VISUALIZATION RENDER FUNCTIONS
+    // ============================================================
+    function renderField() {
+      // Clear offscreen pixel buffer
+      const bgHex = canvasTheme === 'light' ? 0xFFFCFAFA : 0xFF0B0F19; // Light grey vs dark navy
+      if (bgFieldType === 'none') {
+        offBuf32.fill(bgHex);
+      } else {
+        const u0_sq = u0 * u0;
+        for (let i = 0; i < numCells; i++) {
+          if (solid[i]) {
+            // Write solid background
+            offBuf32[i] = canvasTheme === 'light' ? 0xFF786B53 : 0xFF332F2A; // Slate blue vs dark slate
+            continue;
+          }
+
+          const ux = u_x_grid[i];
+          const uy = u_y_grid[i];
+          const rho = rho_grid[i];
+
+          if (bgFieldType === 'velocity') {
+            const speed = Math.sqrt(ux*ux + uy*uy);
+            // Normalized relative to max expected flow speed
+            const val = Math.min(255, Math.round((speed / 0.12) * 255));
+            offBuf32[i] = velocityLUT[val];
+          } 
+          else if (bgFieldType === 'pressure') {
+            // Pressure variation around p_infinity = 1/3
+            // Scale density range [0.93, 1.07] to [0, 255]
+            const val = Math.min(255, Math.max(0, Math.round((rho - 0.93) / 0.14 * 255)));
+            offBuf32[i] = pressureLUT[val];
+          } 
+          else if (bgFieldType === 'vorticity') {
+            const x = i % Nx;
+            const y = Math.floor(i / Nx);
+            const vort = computeVorticity(x, y);
+            // Map vorticity range [-0.05, 0.05] to [0, 255]
+            const val = Math.min(255, Math.max(0, Math.round((vort + 0.05) / 0.10 * 255)));
+            offBuf32[i] = vorticityLUT[val];
+          }
+        }
+      }
+
+      // Copy buffer to offscreen canvas
+      offImg.data.set(offBuf8);
+      offCtx.putImageData(offImg, 0, 0);
+
+      // Draw offscreen canvas stretched onto main canvas
+      ctx.clearRect(0, 0, simSize.width, simSize.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(offscreenCanvas, 0, 0, simSize.width, simSize.height);
+    }
+
+    function renderOverlay() {
+      const scaleX = simSize.width / Nx;
+      const scaleY = simSize.height / Ny;
+
+      // 1. Draw Static Streamlines
+      if (overlayType === 'streamlines') {
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = canvasTheme === 'light' ? 'rgba(83, 107, 120, 0.45)' : 'rgba(110, 231, 183, 0.55)';
+        
+        const numStreamlines = 22;
+        const dt = 0.8;
+        
+        for (let s = 0; s < numStreamlines; s++) {
+          let px = 0;
+          let py = (s + 0.5) * (Ny / numStreamlines);
+
+          ctx.beginPath();
+          ctx.moveTo(px * scaleX, py * scaleY);
+
+          for (let step = 0; step < 260; step++) {
+            // Bilinear interpolate velocity
+            let x0 = Math.floor(px);
+            let y0 = Math.floor(py);
+            if (x0 < 0) x0 = 0; if (x0 >= Nx - 1) x0 = Nx - 2;
+            const y0_p = (y0 % Ny + Ny) % Ny;
+            const y1_p = ((y0 + 1) % Ny + Ny) % Ny;
+            const tx = px - x0;
+            const ty = py - y0;
+
+            const idx00 = y0_p * Nx + x0;
+            const idx10 = y0_p * Nx + (x0 + 1);
+            const idx01 = y1_p * Nx + x0;
+            const idx11 = y1_p * Nx + (x0 + 1);
+
+            const ux = (1 - tx) * (1 - ty) * u_x_grid[idx00] + tx * (1 - ty) * u_x_grid[idx10] + (1 - tx) * ty * u_x_grid[idx01] + tx * ty * u_x_grid[idx11];
+            const uy = (1 - tx) * (1 - ty) * u_y_grid[idx00] + tx * (1 - ty) * u_y_grid[idx10] + (1 - tx) * ty * u_y_grid[idx01] + tx * ty * u_y_grid[idx11];
+
+            px += ux * dt;
+            py += uy * dt;
+
+            // Stop tracing if particle goes out of bounds or hits obstacle
+            if (px < 0 || px >= Nx || py < 0 || py >= Ny) break;
+            
+            const gX = Math.round(px);
+            const gY = (Math.round(py) % Ny + Ny) % Ny;
+            if (solid[gY * Nx + gX]) break;
+
+            ctx.lineTo(px * scaleX, py * scaleY);
+          }
+          ctx.stroke();
+        }
+      }
+
+      // 2. Draw Moving Tracing Particles
+      else if (overlayType === 'particles') {
+        ctx.fillStyle = canvasTheme === 'light' ? 'rgba(83, 107, 120, 0.8)' : 'rgba(6, 182, 212, 0.85)';
+        for (let p = 0; p < maxParticles; p++) {
+          const sx = p_x[p] * scaleX;
+          const sy = p_y[p] * scaleY;
+          
+          // Draw small trace circles
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.5, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+
+      // 3. Draw Vector Airfoil (Sleek Brutalist Styling)
+      ctx.beginPath();
+      const rad = (aoa * Math.PI) / 180;
+      const cosA = Math.cos(rad);
+      const sinA = Math.sin(rad);
+
+      for (let i = 0; i <= 60; i++) {
+        const xNorm = i / 60;
+        const rx = xNorm * chord;
+        const ry = chord * (
+          0.5946895 * Math.sqrt(xNorm) -
+          0.126 * xNorm -
+          0.3516 * xNorm * xNorm +
+          0.2843 * xNorm * xNorm * xNorm -
+          0.1015 * xNorm * xNorm * xNorm * xNorm
+        );
+        const dx = rx * cosA - ry * sinA;
+        const dy = rx * sinA + ry * cosA;
+
+        const sx = (xc + dx) * scaleX;
+        const sy = (yc + dy) * scaleY;
+
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      }
+
+      for (let i = 60; i >= 0; i--) {
+        const xNorm = i / 60;
+        const rx = xNorm * chord;
+        const ry = -chord * (
+          0.5946895 * Math.sqrt(xNorm) -
+          0.126 * xNorm -
+          0.3516 * xNorm * xNorm +
+          0.2843 * xNorm * xNorm * xNorm -
+          0.1015 * xNorm * xNorm * xNorm * xNorm
+        );
+        const dx = rx * cosA - ry * sinA;
+        const dy = rx * sinA + ry * cosA;
+
+        const sx = (xc + dx) * scaleX;
+        const sy = (yc + dy) * scaleY;
+
+        ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+
+      // Brutalist Style: Slate fill, 2px border
+      ctx.fillStyle = '#536b78';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = canvasTheme === 'light' ? '#111827' : '#ffffff';
+      ctx.stroke();
+    }
+
+    // ============================================================
+    // LIVE TELEMETRY AND PRESSURE COEFFICIENT PLOT
+    // ============================================================
+    let forceSumY = 0;
+    
+    function calculateAerodynamics() {
+      let sumTopP = 0;
+      let sumBottomP = 0;
+      const pInf = 1.0 / 3.0;
+
+      const rad = (aoa * Math.PI) / 180;
+      const cosA = Math.cos(rad);
+      const sinA = Math.sin(rad);
+
+      // Sample points along the surface
+      const samples = chord;
+      for (let i = 0; i < samples; i++) {
+        const xNorm = i / (samples - 1);
+        const rx = xNorm * chord;
+        const ry = chord * (
+          0.5946895 * Math.sqrt(xNorm) -
+          0.126 * xNorm -
+          0.3516 * xNorm * xNorm +
+          0.2843 * xNorm * xNorm * xNorm -
+          0.1015 * xNorm * xNorm * xNorm * xNorm
+        );
+
+        // Upper surface global coordinates
+        const dxTop = rx * cosA - ry * sinA;
+        const dyTop = rx * sinA + ry * cosA;
+        const gxTop = Math.round(xc + dxTop + sinA * 1.2);
+        const gyTop = Math.round(yc + dyTop - cosA * 1.2);
+
+        // Lower surface global coordinates
+        const dxBot = rx * cosA + ry * sinA;
+        const dyBot = rx * sinA - ry * cosA;
+        const gxBot = Math.round(xc + dxBot - sinA * 1.2);
+        const gyBot = Math.round(yc + dyBot + cosA * 1.2);
+
+        const getVal = (gx, gy) => {
+          const gy_wrapped = (gy % Ny + Ny) % Ny;
+          if (gx >= 0 && gx < Nx) {
+            return rho_grid[gy_wrapped * Nx + gx] / 3.0;
+          }
+          return pInf;
+        };
+
+        sumTopP += getVal(gxTop, gyTop);
+        sumBottomP += getVal(gxBot, gyBot);
+      }
+
+      // Integrated vertical pressure force
+      forceSumY = sumBottomP - sumTopP;
+      
+      // Calculate Lift Coefficient Cl
+      // Cl = Fy / (0.5 * rho * u0^2 * chord)
+      const dynamicPres = 0.5 * 1.0 * u0 * u0 * chord;
+      const liftCoeff = dynamicPres > 1e-6 ? forceSumY / dynamicPres : 0.0;
+      
+      // Update DOM
+      document.getElementById('val-cl').innerText = liftCoeff.toFixed(3);
+      
+      const stallElement = document.getElementById('val-stall');
+      const liftBoxElement = document.getElementById('lift-box');
+      if (Math.abs(aoa) >= 12) {
+        stallElement.innerText = "Stall Warning";
+        liftBoxElement.classList.add('stall-warning');
+      } else {
+        stallElement.innerText = "Normal";
+        liftBoxElement.classList.remove('stall-warning');
+      }
+    }
+
+    function renderCpPlot() {
+      // Clear cp graph canvas
+      cpCtx.fillStyle = '#ffffff';
+      cpCtx.fillRect(0, 0, cpSize.width, cpSize.height);
+
+      const marginL = 50;
+      const marginR = 15;
+      const marginT = 25;
+      const marginB = 25;
+      const graphW = cpSize.width - marginL - marginR;
+      const graphH = cpSize.height - marginT - marginB;
+
+      // Draw Grid Axes
+      cpCtx.strokeStyle = '#e2e8f0';
+      cpCtx.lineWidth = 1;
+      cpCtx.beginPath();
+      
+      // Reference line Cp = 0.0
+      // Scale: -Cp goes from -1.5 (bottom) to 3.0 (top)
+      const minCpY = -1.5;
+      const maxCpY = 3.0;
+      const getScreenY = (cpVal) => {
+        const valNeg = -cpVal; // negative Cp plotted up
+        const t = (valNeg - minCpY) / (maxCpY - minCpY);
+        return marginT + graphH * (1.0 - t);
+      };
+
+      const yZero = getScreenY(0.0);
+      cpCtx.moveTo(marginL, yZero);
+      cpCtx.lineTo(marginL + graphW, yZero);
+      cpCtx.stroke();
+
+      // Tick markers (Horizontal reference bars)
+      const ticks = [-1.0, 0.0, 1.0, 2.0];
+      cpCtx.fillStyle = '#64748b';
+      cpCtx.font = '9px var(--font-mono)';
+      cpCtx.textAlign = 'right';
+      cpCtx.textBaseline = 'middle';
+
+      ticks.forEach(tick => {
+        const yTick = getScreenY(tick);
+        if (yTick >= marginT && yTick <= marginT + graphH) {
+          // Draw faint guideline
+          cpCtx.strokeStyle = '#f1f5f9';
+          cpCtx.beginPath();
+          cpCtx.moveTo(marginL, yTick);
+          cpCtx.lineTo(marginL + graphW, yTick);
+          cpCtx.stroke();
+
+          // Label
+          cpCtx.fillText(tick.toFixed(1), marginL - 8, yTick);
+        }
+      });
+
+      // Axis borders
+      cpCtx.strokeStyle = '#536b78';
+      cpCtx.lineWidth = 2;
+      cpCtx.strokeRect(marginL, marginT, graphW, graphH);
+
+      // Label details
+      cpCtx.fillStyle = '#536b78';
+      cpCtx.font = '10px var(--font-sans)';
+      cpCtx.textAlign = 'center';
+      cpCtx.fillText("Leading Edge (0%)", marginL + 5, cpSize.height - 8);
+      cpCtx.fillText("Trailing Edge (100%)", marginL + graphW - 5, cpSize.height - 8);
+
+      cpCtx.save();
+      cpCtx.translate(12, cpSize.height / 2);
+      cpCtx.rotate(-Math.PI / 2);
+      cpCtx.fillText("-Cp (Suction ↑)", 0, 0);
+      cpCtx.restore();
+
+      // Calculate Cp curves along chord
+      const cpTop = [];
+      const cpBottom = [];
+      const dynamicPres = 0.5 * 1.0 * u0 * u0;
+      const pInf = 1.0 / 3.0;
+
+      const rad = (aoa * Math.PI) / 180;
+      const cosA = Math.cos(rad);
+      const sinA = Math.sin(rad);
+
+      for (let i = 0; i < chord; i++) {
+        const xNorm = i / (chord - 1);
+        const rx = xNorm * chord;
+        const ry = chord * (
+          0.5946895 * Math.sqrt(xNorm) -
+          0.126 * xNorm -
+          0.3516 * xNorm * xNorm +
+          0.2843 * xNorm * xNorm * xNorm -
+          0.1015 * xNorm * xNorm * xNorm * xNorm
+        );
+
+        // Upper surface global coordinates
+        const dxTop = rx * cosA - ry * sinA;
+        const dyTop = rx * sinA + ry * cosA;
+        const gxTop = Math.round(xc + dxTop + sinA * 1.2);
+        const gyTop = Math.round(yc + dyTop - cosA * 1.2);
+
+        // Lower surface global coordinates
+        const dxBot = rx * cosA + ry * sinA;
+        const dyBot = rx * sinA - ry * cosA;
+        const gxBot = Math.round(xc + dxBot - sinA * 1.2);
+        const gyBot = Math.round(yc + dyBot + cosA * 1.2);
+
+        const getVal = (gx, gy) => {
+          const gy_wrapped = (gy % Ny + Ny) % Ny;
+          if (gx >= 0 && gx < Nx) {
+            return rho_grid[gy_wrapped * Nx + gx] / 3.0;
+          }
+          return pInf;
+        };
+
+        const pTop = getVal(gxTop, gyTop);
+        const pBottom = getVal(gxBot, gyBot);
+
+        // Cp = (p - p_inf) / (0.5 * rho * u0^2)
+        const valTop = dynamicPres > 1e-6 ? (pTop - pInf) / dynamicPres : 0.0;
+        const valBottom = dynamicPres > 1e-6 ? (pBottom - pInf) / dynamicPres : 0.0;
+
+        cpTop.push({ x: xNorm, y: valTop });
+        cpBottom.push({ x: xNorm, y: valBottom });
+      }
+
+      // Draw upper surface curve (slate)
+      if (cpTop.length > 0) {
+        cpCtx.strokeStyle = '#536b78';
+        cpCtx.lineWidth = 2;
+        cpCtx.beginPath();
+        cpCtx.moveTo(marginL + cpTop[0].x * graphW, getScreenY(cpTop[0].y));
+        for (let i = 1; i < cpTop.length; i++) {
+          cpCtx.lineTo(marginL + cpTop[i].x * graphW, getScreenY(cpTop[i].y));
+        }
+        cpCtx.stroke();
+      }
+
+      // Draw lower surface curve (red)
+      if (cpBottom.length > 0) {
+        cpCtx.strokeStyle = '#ef4444';
+        cpCtx.lineWidth = 2;
+        cpCtx.beginPath();
+        cpCtx.moveTo(marginL + cpBottom[0].x * graphW, getScreenY(cpBottom[0].y));
+        for (let i = 1; i < cpBottom.length; i++) {
+          cpCtx.lineTo(marginL + cpBottom[i].x * graphW, getScreenY(cpBottom[i].y));
+        }
+        cpCtx.stroke();
+      }
+
+      // Small Legend Overlay
+      cpCtx.fillStyle = '#64748b';
+      cpCtx.font = '9px var(--font-mono)';
+      cpCtx.textAlign = 'left';
+      cpCtx.fillStyle = '#536b78';
+      cpCtx.fillRect(marginL + 20, marginT + 12, 10, 6);
+      cpCtx.fillStyle = '#64748b';
+      cpCtx.fillText("Upper Surface", marginL + 35, marginT + 16);
+
+      cpCtx.fillStyle = '#ef4444';
+      cpCtx.fillRect(marginL + 120, marginT + 12, 10, 6);
+      cpCtx.fillStyle = '#64748b';
+      cpCtx.fillText("Lower Surface", marginL + 135, marginT + 16);
+    }
+
+    // ============================================================
+    // MAIN PERFORMANCE TIMER & CONTROL LOOPS
+    // ============================================================
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+
+    function renderLoop() {
+      // Step LBM Physics solver when active
+      if (!isPaused) {
+        // Run solver steps per frame to speed up settling time
+        const stepsPerFrame = 3;
+        for (let s = 0; s < stepsPerFrame; s++) {
+          solverStep();
+        }
+        
+        // Update trace particles
+        if (overlayType === 'particles') {
+          updateParticles();
+        }
+      }
+
+      // Redraw simulation field
+      renderField();
+      renderOverlay();
+
+      // Redraw Cp graph & stats
+      calculateAerodynamics();
+      renderCpPlot();
+
+      // Compute frame rates
+      frameCount++;
+      const time = performance.now();
+      if (time >= lastTime + 1000) {
+        fps = Math.round((frameCount * 1000) / (time - lastTime));
+        document.getElementById('val-fps').innerText = `${fps} FPS`;
+        frameCount = 0;
+        lastTime = time;
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // ============================================================
+    // EVENT LISTENERS & USER CONTROLS
+    // ============================================================
+    const slideAoA = document.getElementById('slide-aoa');
+    const lblAoA = document.getElementById('lbl-aoa');
+    slideAoA.addEventListener('input', (e) => {
+      aoa = parseInt(e.target.value);
+      lblAoA.innerText = `${aoa > 0 ? '+' : ''}${aoa}°`;
+      updateSolidMask();
+    });
+
+    const slideRe = document.getElementById('slide-re');
+    const lblRe = document.getElementById('lbl-re');
+    slideRe.addEventListener('input', (e) => {
+      Re = parseInt(e.target.value);
+      lblRe.innerText = `Re = ${Re}`;
+      document.getElementById('val-re').innerText = Re;
+      viscosity = (u0 * chord) / Re;
+      tau = 3.0 * viscosity + 0.5;
+    });
+
+    const slideU0 = document.getElementById('slide-u0');
+    const lblU0 = document.getElementById('lbl-u0');
+    slideU0.addEventListener('input', (e) => {
+      u0 = parseFloat(e.target.value);
+      lblU0.innerText = u0.toFixed(3);
+      viscosity = (u0 * chord) / Re;
+      tau = 3.0 * viscosity + 0.5;
+    });
+
+    const slideParticles = document.getElementById('slide-particles');
+    const lblParticles = document.getElementById('lbl-particles');
+    slideParticles.addEventListener('input', (e) => {
+      maxParticles = parseInt(e.target.value);
+      lblParticles.innerText = maxParticles;
+    });
+
+    const selectBgField = document.getElementById('select-bg-field');
+    selectBgField.addEventListener('change', (e) => {
+      bgFieldType = e.target.value;
+    });
+
+    const selectOverlay = document.getElementById('select-overlay');
+    const groupParticles = document.getElementById('group-particles');
+    selectOverlay.addEventListener('change', (e) => {
+      overlayType = e.target.value;
+      if (overlayType === 'particles') {
+        groupParticles.style.display = 'block';
+      } else {
+        groupParticles.style.display = 'none';
+      }
+    });
+
+    const selectTheme = document.getElementById('select-theme');
+    selectTheme.addEventListener('change', (e) => {
+      canvasTheme = e.target.value;
+      document.getElementById('theme-indicator').innerText = 
+        canvasTheme === 'light' ? 'LATTICE BOLTZMANN SOLVER' : 'WIND TUNNEL SOLVER [DARK]';
+      generateLUTs();
+    });
+
+    // Playback Controls
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    btnPlayPause.addEventListener('click', () => {
+      isPaused = !isPaused;
+      btnPlayPause.innerHTML = isPaused ? 
+        `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Resume</span>` :
+        `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>Pause</span>`;
+    });
+
+    const btnStep = document.getElementById('btn-step');
+    btnStep.addEventListener('click', () => {
+      if (isPaused) {
+        solverStep();
+        if (overlayType === 'particles') updateParticles();
+      }
+    });
+
+    document.getElementById('btn-reset-particles').addEventListener('click', () => {
+      initParticles();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      initSimulation();
+    });
+
+    // Interactive Ink Spraying
+    function injectInkAt(lx, ly) {
+      for (let i = 0; i < 15; i++) {
+        const idx = Math.floor(Math.random() * maxParticles);
+        p_x[idx] = lx + (Math.random() - 0.5) * 1.5;
+        p_y[idx] = (ly + (Math.random() - 0.5) * 1.5 + Ny) % Ny;
+        p_life[idx] = 1.0; // Reset life
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        const rect = canvas.getBoundingClientRect();
+        const lx = (e.clientX - rect.left) / rect.width * Nx;
+        const ly = (e.clientY - rect.top) / rect.height * Ny;
+        injectInkAt(lx, ly);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (e.buttons === 1) { // Left mouse click held
+        const rect = canvas.getBoundingClientRect();
+        const lx = (e.clientX - rect.left) / rect.width * Nx;
+        const ly = (e.clientY - rect.top) / rect.height * Ny;
+        injectInkAt(lx, ly);
+      }
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const lx = (touch.clientX - rect.left) / rect.width * Nx;
+      const ly = (touch.clientY - rect.top) / rect.height * Ny;
+      injectInkAt(lx, ly);
+    });
+
+    // Prevent scrolling when drawing on touchscreen
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const lx = (touch.clientX - rect.left) / rect.width * Nx;
+      const ly = (touch.clientY - rect.top) / rect.height * Ny;
+      injectInkAt(lx, ly);
+    }, { passive: false });
+
+    // Initialize wind tunnel
+    initSimulation();
+    
+    // Start animation loop
+    renderLoop();
+  </script>
 </body>
 </html>
