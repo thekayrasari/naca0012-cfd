@@ -1,4 +1,4 @@
-# Lattice Boltzmann Wind Tunnel Simulator
+# CADES — Computational Aerodynamics Display & Evaluation System
 
 A high-performance, interactive 2D aerodynamics simulator built with the **Lattice Boltzmann Method (LBM)** and **D2Q9 lattice**. Visualize airflow around a NACA 0012 airfoil in real-time with live pressure coefficient distributions, stall detection, and interactive particle tracing.
 
@@ -92,7 +92,7 @@ Cp = (p - p∞) / (0.5 × ρ × u₀²)
 ├── state.js                # Simulation state & parameters
 ├── constants.js            # Grid dimensions & D2Q9 lattice
 ├── cpplot.js               # Pressure coefficient plot renderer
-├── aerodyn.jsx             # React wrapper (if used in React environment)
+├── cades.jsx               # React wrapper (if used in React environment)
 └── aerodynamics.js         # Aerodynamic forces module
 ```
 
@@ -195,7 +195,7 @@ var yt = chord * (yourAirfoilFunction(xNorm));
 - Modify relaxation time bounds in `state.js`
 
 ### React Integration
-Use `aerodyn.jsx` as a wrapper component for integration into React applications.
+Use `cades.jsx` as a wrapper component for integration into React applications.
 
 ## Performance Metrics
 
